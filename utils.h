@@ -1,3 +1,3 @@
-#include <utils.c>
+#include "utils.c"
 
-char *readCmd(unsigned *length);
+int readCmd(char *command);
