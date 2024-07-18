@@ -28,8 +28,8 @@ int main(int argc, char *argv[]){
     }
     //process variables 
     config_t config;
-    char *command;
-    int arg_value;
+    char *command = NULL;
+    int arg_value = 0;
 
     //argument parsing
     if(strncmp(argv[1], "-m", 2) == 0) config.mode = MANUAL;
@@ -61,6 +61,10 @@ int main(int argc, char *argv[]){
     }
     config.interval = arg_value;
 
+    printf("mode: %d\n", config.mode);
+    printf("amount: %d\n", config.amount);
+    printf("interval: %d\n", config.interval);
+
     //irrigation executor thread
     pthread_t irrigationControl;
     pthread_create(&irrigationControl, NULL, irrigationController, (void*)&config);
@@ -80,10 +84,11 @@ int main(int argc, char *argv[]){
     free(command);
     return 0;
 }
+
 bool processCommand(char *input, config_t *config){
     char command;
     int i = 0;
-    while (input[i] != " ")
+    while (input[i] != ' ')
     {
         return false;   
     }
@@ -91,6 +96,6 @@ bool processCommand(char *input, config_t *config){
 }
 
 void* irrigationController(void *configuration){
-    config_t *config = (config_t*) configuration;
+    config_t *config = (config_t*)configuration;
     return NULL;
 }
