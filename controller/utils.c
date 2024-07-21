@@ -8,13 +8,24 @@
 
 /*
 //LIST OF ALL COMMANDS
-- mode
+- mode [mode]
     changes mode of the system
-    -a automatic operation -m manual
-- run 
-    run in 
-
-
+    parameters:
+    (mode) -a automatic operation -m manual
+- run [amount]
+    run in watering cycle in manual mode
+    parameters:
+    (int) amount in liters to be dispensed
+- config [amount] [interval]
+    change the config for automatic mode
+    parameters:
+    (int) new amount per cycle in liters
+    (int) new interval per cycle in minutes
+- weather (date)
+    print the relevant weather data
+    parameters:
+    (date) date for which you want the weather data [optional]
+    without parameter prints weather for the last 5 days and upcoming 5 days
 
 */
 

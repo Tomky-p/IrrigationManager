@@ -13,6 +13,11 @@
 #define MIN_INTERVAL 360
 #endif
 
+#ifndef LOCATION
+//Geographic location name used to pull weather data
+#define LOCATION "Poděbrady"
+#endif
+
 //proccess the commands from user, updates the config for irrigation thread and runs irrigation in manual mode
 bool processCommand(char *input, config_t *config);
 
@@ -72,11 +77,13 @@ int main(int argc, char *argv[]){
     //command line control thread
     while (true)
     {
+        //in the future to be replace by command recieving from the socket from the web interface
         if(readCmd(command) == READING_SUCCESS){
-           if(processCommand(command, &config)){
-                printf("Shutting down...\n");
-                break;
-           }
+            printf("%s", command);
+            processCommand(command, &config);
+             //   printf("Shutting down...\n");
+               // break;
+           //}
         }
     }
 
@@ -86,7 +93,8 @@ int main(int argc, char *argv[]){
 }
 
 bool processCommand(char *input, config_t *config){
-    char command;
+    char *cmd_buffer = (char*)malloc(STARTING_CAPACITY * sizeof(char));
+    char *param_buffer = (char*)malloc(STARTING_CAPACITY * sizeof(char));
     int i = 0;
     while (input[i] != ' ')
     {
@@ -97,5 +105,6 @@ bool processCommand(char *input, config_t *config){
 
 void* irrigationController(void *configuration){
     config_t *config = (config_t*)configuration;
+
     return NULL;
 }
