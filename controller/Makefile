@@ -4,9 +4,9 @@ CFLAGS = -Wall -std=c11 -pedantic -Wextra -g
 
 TARGET = IrrigationManager
 
-SRCS = main.c utils.c
+SRCS = main.c utils.c weather_utils.c
 
-HEADERS = utils.h
+HEADERS = utils.h weather_utils.h
 
 OBJS=$(SRCS:.c=.o)
 

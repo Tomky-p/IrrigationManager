@@ -18,10 +18,14 @@ typedef struct{
     uint8_t mode;
     uint32_t amount;
     uint32_t interval;
+    bool running;
 }config_t;
 
 //reads the user input commands from stdin
-int readCmd(char *command);
+int readCmd(char **command);
 
 //check whether an string argument is an interger
 bool checkArgument(char *arg);
+
+//proccess the commands from user, updates the config for irrigation thread and runs irrigation in manual mode
+void processCommand(char *input, config_t *config);

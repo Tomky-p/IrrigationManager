@@ -26,31 +26,54 @@
     parameters:
     (date) date for which you want the weather data [optional]
     without parameter prints weather for the last 5 days and upcoming 5 days
-
 */
+void processCommand(char *input, config_t *config){
+    char *cmd_buffer = (char*)malloc(STARTING_CAPACITY * sizeof(char));
+    char *param_buffer_first = (char*)malloc(STARTING_CAPACITY * sizeof(char));
+    char *param_buffer_second = (char*)malloc(STARTING_CAPACITY * sizeof(char));
+    int i = 0;
+    while (input[i] != ' ' && input[i] != '\0')
+    {
+        if(i >= STARTING_CAPACITY) break;
+    }
+}
 
-int readCmd(char *command)
+int readCmd(char **command)
 {
     unsigned capacity = STARTING_CAPACITY;
     unsigned curLength = 0;
     char c;
 
-    command = (char*)malloc(capacity);
-    if (command == NULL) return ALLOCATION_ERR;
+    *command = (char*)malloc(capacity);
+    if (*command == NULL) return ALLOCATION_ERR;
 
     while ((c = getchar()) != EOF && c != '\n' && c != '\0') {
-        if(curLength > MAX_LENGHT) return LENGHT_ERR;
+        if(curLength >= MAX_LENGHT) return LENGHT_ERR;
         //increase capacity if length of message reaches capacity
-        if (curLength == capacity) {
+        if (curLength >= capacity) {
             capacity = capacity * 2;
-            char *tmp = realloc(command, capacity);
-            if (tmp == NULL) return ALLOCATION_ERR;
-            command = tmp;
+            char *tmp = realloc(*command, capacity);
+            if (tmp == NULL){
+                free(*command);
+                return ALLOCATION_ERR;
+            } 
+            *command = tmp;
         }
         //write char into message and increase length
-        command[curLength] = c;
+        (*command)[curLength] = c;
         curLength += 1;
     }
+    if(curLength >= capacity){
+        capacity = capacity * 2;
+        char *tmp = realloc(*command, capacity);
+        if (tmp == NULL){
+            free(*command);
+            return ALLOCATION_ERR;
+        }
+        *command = tmp;
+    }
+    (*command)[curLength] = '\0';
+
     return READING_SUCCESS;
 }
  

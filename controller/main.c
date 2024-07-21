@@ -18,9 +18,6 @@
 #define LOCATION "Poděbrady"
 #endif
 
-//proccess the commands from user, updates the config for irrigation thread and runs irrigation in manual mode
-bool processCommand(char *input, config_t *config);
-
 //thread function manages the irrigation process in automatic mode
 void* irrigationController(void *configuration);
 
@@ -65,6 +62,7 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
     config.interval = arg_value;
+    config.running = true;
 
     printf("mode: %d\n", config.mode);
     printf("amount: %d\n", config.amount);
@@ -75,36 +73,37 @@ int main(int argc, char *argv[]){
     pthread_create(&irrigationControl, NULL, irrigationController, (void*)&config);
 
     //command line control thread
-    while (true)
+    while (config.running)
     {
         //in the future to be replace by command recieving from the socket from the web interface
-        if(readCmd(command) == READING_SUCCESS){
+        int ret = readCmd(&command);
+        if(ret == READING_SUCCESS){
             printf("%s", command);
             processCommand(command, &config);
-             //   printf("Shutting down...\n");
-               // break;
-           //}
+        }
+        if(ret == ALLOCATION_ERR){
+            pthread_join(irrigationControl, NULL);
+            return ALLOCATION_ERR;
         }
     }
 
     pthread_join(irrigationControl, NULL);
-    free(command);
-    return 0;
+    if(command != NULL) free(command);
+    return EXIT_SUCCESS;
 }
 
-bool processCommand(char *input, config_t *config){
-    char *cmd_buffer = (char*)malloc(STARTING_CAPACITY * sizeof(char));
-    char *param_buffer = (char*)malloc(STARTING_CAPACITY * sizeof(char));
-    int i = 0;
-    while (input[i] != ' ')
-    {
-        return false;   
-    }
-    return true;
-}
 
 void* irrigationController(void *configuration){
     config_t *config = (config_t*)configuration;
+    while (true)
+    {
+        
+    }
+    
+    
+    if(config->mode == AUTO){
+
+    }
 
     return NULL;
 }
