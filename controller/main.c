@@ -6,14 +6,17 @@
 #include "gpio_utils.h"
 
 
-//thread function manages the irrigation process in automatic mode
-void* irrigationController(void *configuration);
+//thread routine function manages the irrigation process in automatic mode
+void* irrigationController();
 
-//USAGE: ./irrigationManager [Mode][Amount (l)][Interval (min)]
+//thread routine function that reads and processes the commands the user inputs
+void* cmdManager();
+
+//USAGE: ./irrigationManager [Mode] [Number of times per day] [Amount (l)]
 int main(int argc, char *argv[]){
     //argument check
     if(argc < 4){
-        fprintf(stderr, "Not enough arguments, USAGE: ./irrigationManager [Mode of(-a/-m)] [Amount of water per cycle in liters] [Time between cycles in minutes]\n");
+        fprintf(stderr, "Not enough arguments, USAGE: ./irrigationManager [Mode of(-a/-m)] [Number of times per day] [Amount of water per cycle in liters]\n");
         return EXIT_FAILURE;
     }
     //process variables 
@@ -28,37 +31,73 @@ int main(int argc, char *argv[]){
     }
 
     if(checkArgument(argv[2]) == false){
-        fprintf(stderr, "Invalid argument, provided amount is not an interger or is too large.\n");
+        fprintf(stderr, "Invalid argument, provided times_per_day is not an interger or is too large.\n");
         return EXIT_FAILURE;
     }
     arg_value = atoi(argv[2]);
+    if(arg_value < MIN_INTERVAL){
+        fprintf(stderr, "Invalid argument, selected an times_per_day shorter that the minimum lenght.\n");
+        return EXIT_FAILURE;
+    }
+    config.times_per_day = arg_value;
+
+    if(checkArgument(argv[3]) == false){
+        fprintf(stderr, "Invalid argument, provided amount is not an interger or is too large.\n");
+        return EXIT_FAILURE;
+    }
+    arg_value = atoi(argv[3]);
     if(arg_value <= 0 || arg_value > MAX_AMOUNT){
         fprintf(stderr, "Invalid argument, selected amount higher that the maximum amount.\n");
         return EXIT_FAILURE;
     }
     config.amount = arg_value;
 
-    if(checkArgument(argv[3]) == false){
-        fprintf(stderr, "Invalid argument, provided interval is not an interger or is too large.\n");
-        return EXIT_FAILURE;
+    printf("Please enter %d times of day at which irrigation should commence.\n", config.times_per_day);
+
+    config.time_routine = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
+    char *command = (char*)malloc(STARTING_CAPACITY);
+    //malloc check
+    if(config.time_routine == NULL || command == NULL){
+        fprintf(stderr, "FATAL ERR! Memory allocation failed.\n");
+        return ALLOCATION_ERR;
     }
-    arg_value = atoi(argv[3]);
-    if(arg_value < MIN_INTERVAL){
-        fprintf(stderr, "Invalid argument, selected an interval shorter that the minimum lenght.\n");
-        return EXIT_FAILURE;
+    //get a time values and put the in the array
+    int index = 0;
+    while(true){
+        int time = readTimeFromUser(&command);
+        if(time == ALLOCATION_ERR){
+            fprintf(stderr, "FATAL ERR! Memory allocation failed.\n");
+            return ALLOCATION_ERR;
+        }
+        if(!isIntTime(time)){
+            fprintf(stderr, INVALID_TIME_INPUT);
+            continue;
+        }
+        if(!checkIntervals(time)){
+            fprintf(stderr, "Times of day must have bigger intervals between each other.\n");
+            continue;
+        }
+
+        printf("Added %d:");
+        config.time_routine[index] = time;
+        index++;
+        if(index >= config.times_per_day) break;
     }
-    config.interval = arg_value;
+    free(command);
     config.running = true;
     config.dispensing = false;
-    config.amount_immidiate = MAX_TIME + 1;
-
-    const char *start_string = (config.interval <) < 10 ? "Starting with following configuration:\nmode: %d\namount: %.0f l\nin an interval of: %d minutes\n" : 
-                                                          "Starting with following configuration:\nmode: %d\namount: %.0f l\nin an interval of: %d minutes\n";
-    printf(start_string, config.mode, (config.duration*60), (config.time/100), (config.time % 100));
-
-    printf("mode: %d\n", config.mode);
-    printf("amount: %d\n", config.amount);
-    printf("interval: %d\n", config.interval);
+    config.amount_immidiate = 0;
+    
+    //print config
+    const char *start_string = (config.mode == AUTO) ? "Starting with following configuration:\nMode: AUTOMATIC\nAmount of: %d l\nDispensing %d times per day at these times: " :
+                                                        "Starting with following configuration:\nMode: MANUAL\nAmount of: %d l\nDispensing %d times per day at these times: ";
+    printf("%s", start_string, config.amount, config.times_per_day);
+    for (size_t i = 0; i < config.times_per_day; i++)
+    {
+        const char *time_string = ((config.time_routine[i] % 100) < 10) ? "%d:0%d " : "%d:%d ";
+        printf("%s", time_string, config.time_routine[i]/100, config.time_routine[i] % 100);
+    }
+    putchar('\n');
 
     int *IC_thread_result;
     int *CMD_thread_result;
@@ -124,21 +163,22 @@ void* automaticController(){
         int curtime = getCurrentTime();
         if(curtime == TIME_ERR){
             *ret = TIME_ERR;
-            config.running = false;
-            return (void*)ret;
+            fprintf(stderr, "%s", TIME_ERR_MSG);
+            break;
         }
         //printf("Mode: %d\n", config.mode);
         //printf("Running: %s\n", config.filtration_running ? "true" : "false");
         //printf("curtime: %d\n", curtime);
-        if(config.mode == AUTO && curtime == config.time && !config.dispensing){        
-            float duration = config.duration;
+        
+        if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing){        
+            int duration = getDispenseTime(config.amount);
             pthread_mutex_unlock(&config_mutex);
             runIrrigation(duration);
         }
-        else if(config.mode == MANUAL && config.amount_immidiate < (MAX_TIME + 1)){
-            float duration = (float)(config.amount_immidiate - curtime)/(float)60;
+        else if(config.mode == MANUAL && config.amount_immidiate > 0){
+            int duration = getDispenseTime(config.amount_immidiate);
             //invalidate the run until time
-            config.amount_immidiate = MAX_TIME + 1; 
+            config.amount_immidiate = 0; 
             pthread_mutex_unlock(&config_mutex);
             runIrrigation(duration);
         }
@@ -150,6 +190,7 @@ void* automaticController(){
         pthread_mutex_lock(&config_mutex);
     }
     pthread_mutex_unlock(&config_mutex);
+    config.running = false;
     return (void*)ret;
 }
 
@@ -174,11 +215,11 @@ void* cmdManager(){
             *ret = processCommand(command);
         }
         if(*ret == ALLOCATION_ERR){
-            fprintf(stderr, "FATAL ERR! Memory allocation failure.\n");
+            fprintf(stderr, "%s", ALLOC_ERR_MSG);
             break;
         }
         if(*ret == TIME_ERR){
-            fprintf(stderr, "FATAL ERR! Failed to get current time.");
+            fprintf(stderr, "%s", TIME_ERR_MSG);
             break;
         }
         pthread_mutex_lock(&config_mutex);

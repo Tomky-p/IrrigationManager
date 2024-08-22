@@ -55,7 +55,7 @@ int processCommand(char *input){
     {
         pthread_mutex_lock(&config_mutex);
         if(config.dispensing){
-            fprintf(stderr, "Cannot switch the operating mode while the filtration is running.\n");
+            fprintf(stderr, "Cannot switch the operating mode while the system is running.\n");
         }
         else if (strncmp(param_buffer_second, "", MAX_LENGHT) != 0){
             fprintf(stderr, "Too many parameters, USAGE: -m for manual or -a for automatic mode.\n");
@@ -91,34 +91,36 @@ int processCommand(char *input){
             args_ok = false;
         }
         if(config.dispensing){
-            fprintf(stderr, "Filtration is already running, wait for the cycle to finish or terminate it to run again.\n");
+            fprintf(stderr, "The system is already dispensing, wait for the cycle to finish or terminate it to run again.\n");
             args_ok = false;
         }
         pthread_mutex_unlock(&config_mutex);
  
-        if((args_ok && !checkArgumentFloat(param_buffer_first)) || (atof(param_buffer_first) <= 0 && args_ok) || (atof(param_buffer_first) > MAX_DURATION && args_ok)){
+        if((args_ok && !checkArgument(param_buffer_first)) || (atoi(param_buffer_first) <= 0 && args_ok) || (atoi(param_buffer_first) > MAX_AMOUNT && args_ok)){
             args_ok = false;
-            fprintf(stderr, "Invalid argument, provide a decimal number as duration in hours. Between 0 and 18 hours.\n");
+            fprintf(stderr, "Invalid argument, provide a sufficient amount to be dispensed.\n");
         }
         if(args_ok && strncmp(param_buffer_second, "" , MAX_LENGHT) != 0){
             args_ok = false;
             fprintf(stderr, "Invalid arguments, provide only one argument.\n");
         }
         if(args_ok){
-            float duration = atof(param_buffer_first);
-            printf("Filtration will run for %0.f minutes\nAre you sure you want proceed?\n[y/n]", duration*60);
+            int amount = atoi(param_buffer_first);
+            printf("The irrigation system will dispense %d liters of water.\nAre you sure you want proceed?\n[y/n]", amount);
             int ret = recieveConfirmation(input);
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
-                printf("Proceeding...\nLaunching filtration for %0.f minutes.\n", duration*60);
-                ret = sendRunSignal(duration);
-                if(ret == TIME_ERR) return TIME_ERR;
+                printf("Proceeding...\nLaunching irrigation for %d minutes.\n", getDispenseTime(amount));
+                pthread_mutex_lock(&config_mutex);
+                config.amount_immidiate = amount;
+                pthread_mutex_unlock(&config_mutex);
             }
             else{
                 printf("Aborted.\n");
             }   
         }   
     }
+    //TO DO: Rework and adapt the config command
     else if (strncmp(cmd_buffer, "config", 7) == 0)
     {
         if(strncmp(param_buffer_first, "", MAX_LENGHT) == 0 && strncmp(param_buffer_second, "" , MAX_LENGHT) == 0){
@@ -154,7 +156,7 @@ int processCommand(char *input){
             if(ret == YES){
                 pthread_mutex_lock(&config_mutex);
                 config.amount = new_amount;
-                config.interval = new_time;
+                config.times_per_day = new_time;
                 printf("Configuration set to:\nDuration: %0.f minutes\nTime: %d:%d\n", config.duration*60, config.time/100, config.time-((config.time/100)*100));
                 pthread_mutex_unlock(&config_mutex);
             }
@@ -163,14 +165,13 @@ int processCommand(char *input){
             }
         }
     }
-    //TO DO implement the help command
     else if (strncmp(cmd_buffer, "kill", 5) == 0)
     {
         if(strncmp(param_buffer_first, "", MAX_LENGHT) != 0 || strncmp(param_buffer_second, "" , MAX_LENGHT) != 0){
             args_ok = false;
         }
         if(args_ok){
-            printf("WARNING! The filtration controler system will be terminated.\nAre you sure you want proceed?\n[y/n]");
+            printf("WARNING! The irrigation system controler will be terminated.\nAre you sure you want proceed?\n[y/n]");
             int ret = recieveConfirmation(input);
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
@@ -195,12 +196,12 @@ int processCommand(char *input){
         }
         pthread_mutex_lock(&config_mutex);
         if(!config.dispensing){
-            fprintf(stderr, "The filtration is currently not running.\n");
+            fprintf(stderr, "The system is currently not dispensing.\n");
             args_ok = false;
         }
         pthread_mutex_unlock(&config_mutex);
         if(args_ok){
-            printf("The filtration currently running.\nAre you sure you want stop the current filtration cycle?\n[y/n]");
+            printf("The system is currently dispensing.\nAre you sure you want stop irrigating?\n[y/n]");
             int ret = recieveConfirmation(input);
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
@@ -214,6 +215,7 @@ int processCommand(char *input){
             }
         }   
     }
+     //TO DO implement the help and state command
     else if (strncmp(cmd_buffer, "help", 5) == 0)
     {
         
@@ -375,15 +377,15 @@ int recieveConfirmation(char *command){
     if(ret != READING_SUCCESS || strncmp(command, "y", 2) != 0) return NO;
     else return YES;
 }
-//TO DO: Rework all time related functions as they will have to account for not just time but also date
+
 int getCurrentTime(){
     time_t now = time(NULL);
     struct tm *currentTime = localtime(&now);
     if (currentTime == NULL) return TIME_ERR;
     return (currentTime->tm_hour*100 + currentTime->tm_min);
 }
-
-int sendRunSignal(float duration){
+//rework this
+/*int sendRunSignal(float duration){
     int curtime = getCurrentTime();
     if(curtime == TIME_ERR) return TIME_ERR;
 
@@ -392,17 +394,36 @@ int sendRunSignal(float duration){
     pthread_mutex_unlock(&config_mutex);
     return READING_SUCCESS;
     
-}
+}*//*
 int timeArithmeticAdd(int time, float duration){
     int minutes = duration * 60;
     int hours = minutes/60;
     minutes = minutes % 60;
     return (time + hours*100 + minutes);
-}
+}*/
 
 bool isIntTime(int time_val){
     if(time_val > MAX_TIME || time_val < 0) return false;
     int minutes = time_val % 100;
     if(minutes > 59 || minutes < 0) return false;
     return true;
+}
+
+int readTimeFromUser(char **buffer){
+    int ret = readCmd(buffer);
+    if(ret < 0) return ret;
+    if(!checkArgument(buffer)) return LENGHT_ERR;
+    return atoi(*buffer);
+}
+
+int getDispenseTime(uint16_t amount){
+    return (amount*60)/LITERS_PER_HOUR;
+}
+
+bool isDispensingTime(int curtime){
+    for (size_t i = 0; i < config.times_per_day; i++)
+    {
+        if (config.time_routine[i] == curtime) return true;
+    }
+    return false;
 }

@@ -15,8 +15,8 @@ bool checkDeviceState(){
     else return false;
 }
 
-void runIrrigation(float duration){
-    float in_miliseconds = ((duration*60)*60)*1000;
+void runIrrigation(int duration){
+    int in_miliseconds = ((duration*60)*60)*1000;
     launchWaterPump();
     pthread_mutex_lock(&config_mutex);
     while (config.dispensing && in_miliseconds > 0)

@@ -16,7 +16,7 @@ int initGpioPinControl();
 bool checkDeviceState();
 
 //runs the filtration for a certain amount of time
-void runIrrigation(float duration);
+void runIrrigation(int duration);
 
 //turns off the filtration
 void shutdownWaterPump();
