@@ -19,9 +19,11 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Not enough arguments, USAGE: ./irrigationManager [Mode of(-a/-m)] [Number of times per day] [Amount of water per cycle in liters]\n");
         return EXIT_FAILURE;
     }
-    //process variables 
-    int arg_value = 0;
-
+    //initialize the mutex
+    if(pthread_mutex_init(&config_mutex, NULL) != 0){
+        fprintf(stderr, "FATAL ERR! Failed to initialize configuration mutex.");
+        return EXIT_FAILURE;
+    }
     //argument parsing
     if(strncmp(argv[1], "-m", 2) == 0) config.mode = MANUAL;
     else if (strncmp(argv[1], "-a", 2) == 0) config.mode = AUTO;
@@ -29,13 +31,16 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Invalid argument, USAGE: -a for Automatic irrigation, -m for manual irrigation.\n");
         return EXIT_FAILURE;
     }
-
+    bool args_ok = true;
+    verifyArguments(&args_ok, argv[2], argv[3], 2);
+    /*
+    int arg_value = 0;
     if(checkArgument(argv[2]) == false){
         fprintf(stderr, "Invalid argument, provided times_per_day is not an interger or is too large.\n");
         return EXIT_FAILURE;
     }
     arg_value = atoi(argv[2]);
-    if(arg_value < MIN_INTERVAL){
+    if(arg_value > MAX_TIMES_PER_DAY){
         fprintf(stderr, "Invalid argument, selected an times_per_day shorter that the minimum lenght.\n");
         return EXIT_FAILURE;
     }
@@ -46,16 +51,20 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
     arg_value = atoi(argv[3]);
-    if(arg_value <= 0 || arg_value > MAX_AMOUNT){
+    if(arg_value <= 0 || arg_value > MAX_AMOUNT_PER_DAY){
         fprintf(stderr, "Invalid argument, selected amount higher that the maximum amount.\n");
         return EXIT_FAILURE;
     }
-    config.amount = arg_value;
+    config.amount = arg_value;*/
 
     printf("Please enter %d times of day at which irrigation should commence.\n", config.times_per_day);
 
-    config.time_routine = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
     char *command = (char*)malloc(STARTING_CAPACITY);
+    config.time_routine = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
+    if(getTimeValues(command, config.times_per_day) == ALLOCATION_ERR){
+        return ALLOCATION_ERR;
+    }
+    /*
     //malloc check
     if(config.time_routine == NULL || command == NULL){
         fprintf(stderr, "FATAL ERR! Memory allocation failed.\n");
@@ -82,13 +91,16 @@ int main(int argc, char *argv[]){
         config.time_routine[index] = time;
         index++;
         if(index >= config.times_per_day) break;
-    }
+    }*/
     free(command);
     config.running = true;
     config.dispensing = false;
     config.amount_immidiate = 0;
     
     //print config
+    printf("Starting with following configuration:\n");
+    printConfig();
+    /*
     const char *start_string = (config.mode == AUTO) ? "Starting with following configuration:\nMode: AUTOMATIC\nAmount of: %d l\nDispensing %d times per day at these times: " :
                                                         "Starting with following configuration:\nMode: MANUAL\nAmount of: %d l\nDispensing %d times per day at these times: ";
     printf("%s", start_string, config.amount, config.times_per_day);
@@ -97,7 +109,7 @@ int main(int argc, char *argv[]){
         const char *time_string = ((config.time_routine[i] % 100) < 10) ? "%d:0%d " : "%d:%d ";
         printf("%s", time_string, config.time_routine[i]/100, config.time_routine[i] % 100);
     }
-    putchar('\n');
+    putchar('\n');*/
 
     int *IC_thread_result;
     int *CMD_thread_result;
@@ -107,10 +119,6 @@ int main(int argc, char *argv[]){
     //irrigation executor thread
     pthread_t irrigationControl;
 
-    if(pthread_mutex_init(&config_mutex, NULL) != 0){
-        fprintf(stderr, "FATAL ERR! Failed to initialize configuration mutex.");
-        return EXIT_FAILURE;
-    }
     //create threads
     if(pthread_create(&cmdMonitor, NULL, cmdManager, NULL) != 0){
         fprintf(stderr, "FATAL ERR! Failed to create command line monitor thread.\n");

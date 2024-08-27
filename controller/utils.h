@@ -34,15 +34,21 @@
 
 //USER ERR messages
 #define INVALID_TIME_INPUT "Provided time is invalid. Provide a number corresponding to a time of day in format: 1135 = 11:35\n"
+#define SYSTEM_RUNNING_MSG "Cannot execute command the system is currently dispensing.\n"
+#define SYSTEM_NOT_RUNNING_MSG "Cannot execute command the system is currently not dispensing.\n"
+#define INVALID_INTERVAL_MSG "Times of day must have bigger intervals between each other.\n"
+
+//INFO messages
+#define HELP_MESSAGE "LIST OF ALL COMMANDS\n- mode [mode] -(confirm)\n  changes mode of the system\n    parameters:\n    (mode) -a automatic operation -m manual\n- run [duration] -(confirm)\n    run in watering cycle in manual mode\n    parameters:\n    (int) duration in liters to be dispensed\n- config [duration] [time] -(confirm)\n    change the config for automatic mode\n    parameters:\n    (int) new duration per cycle in liters\n    (int) new time per cycle in minutes\n- stop -(confirm)\n    stops the current filtration cycle\n- kill -(confirm)\n    stops and quits the entire program\n"
 
 //mode values
 #define AUTO 1
 #define MANUAL 0
 
 
-#ifndef MAX_AMOUNT
+#ifndef MAX_AMOUNT_PER_DAY
 //The maximum amount of water to be realeased in a cycle (in liters)
-#define MAX_AMOUNT 170
+#define MAX_AMOUNT_PER_DAY 170
 #endif
 
 #ifndef MIN_INTERVAL
@@ -69,11 +75,13 @@ typedef struct{
     //amount to be dispensed in liters
     uint16_t amount;
     //number of days in between routines
-    uint16_t times_per_day;
+    uint8_t times_per_day;
     //specific times of day when the system runs
     uint16_t *time_routine;
     //used in manual mode to pass the amount
     uint16_t amount_immidiate;
+    //amount dispensed today
+    float amount_dispensed;
     //indicates the state of the program
     bool running;
     //indicates whether the system is dispensing water currently
@@ -92,17 +100,11 @@ bool checkArgument(char *arg);
 //proccess the commands from user, updates the config for irrigation thread and runs irrigation in manual mode
 int processCommand(char *input);
 
-bool checkArgumentFloat(char *arg);
-
 bool splitToBuffers(char *input, char *cmd_buffer, char *param_buffer_first, char *param_buffer_second);
 
 int recieveConfirmation(char *command);
 
 int getCurrentTime();
-
-//int sendRunSignal(float duration);
-
-//int timeArithmeticAdd(int time, float duration);
 
 bool isIntTime(int time_val);
 
@@ -114,3 +116,13 @@ int readTimeFromUser(char **buffer);
 
 //returns true the its time to dispence water according to config
 bool isDispensingTime(int curtime);
+
+void printConfig();
+
+int getTimeValues(char *buffer, int times_per_day);
+
+void verifyArguments(bool *args_ok, char *first_arg, char *second_arg, int desired_count);
+
+void countArguments(int desired_count, bool *args_ok, char *first_param, char *second_param);
+
+void verifyState(bool *args_ok, bool desiredOn);

@@ -16,15 +16,16 @@ bool checkDeviceState(){
 }
 
 void runIrrigation(int duration){
-    int in_miliseconds = ((duration*60)*60)*1000;
+    int in_seconds = (duration*60);
     launchWaterPump();
     pthread_mutex_lock(&config_mutex);
-    while (config.dispensing && in_miliseconds > 0)
+    while (config.dispensing && in_seconds > 0)
     {
         pthread_mutex_unlock(&config_mutex);
         delay(1000);
-        in_miliseconds = in_miliseconds - 1000;
+        in_seconds = in_seconds - 1;
         pthread_mutex_lock(&config_mutex);
+        config.amount_dispensed += ((float)LITERS_PER_HOUR)/60;
     }
     pthread_mutex_unlock(&config_mutex);
     if(checkDeviceState()){

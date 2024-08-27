@@ -12,14 +12,14 @@
 //initializes the GPIO pin interface
 int initGpioPinControl();
 
-//returns true if the filtration is on
+//returns true if the irrigation system is dispensing
 bool checkDeviceState();
 
-//runs the filtration for a certain amount of time
+//dispenses water for a certain amount of time
 void runIrrigation(int duration);
 
-//turns off the filtration
+//turns off the water pump
 void shutdownWaterPump();
 
-//turns on the filtration
+//turns on the water pump
 void launchWaterPump();
