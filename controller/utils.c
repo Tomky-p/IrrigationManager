@@ -13,24 +13,27 @@ pthread_mutex_t config_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
 //LIST OF ALL COMMANDS
-- mode [mode] -(confirm)
+- mode [mode]
     changes mode of the system
     parameters:
     (mode) -a automatic operation -m manual
-- run [duration] -(confirm)
+    - without parameters: show the current mode
+- run [amount] -(confirm)
     run in watering cycle in manual mode
     parameters:
-    (int) duration in liters to be dispensed
-- config [duration] [time] -(confirm)
+    (int) amount in liters to be dispensed
+- config [times per day] [amount] -(confirm)
     change the config for automatic mode
     parameters:
-    (int) new duration per cycle in liters
-    (int) new time per cycle in minutes
+    (int) new number of cycles per day
+    (int) new amount to be dispensed per cycle
+    - without paramater: prints current config
 - stop -(confirm)
-    stops the current filtration cycle
+    stops the current irrigation cycle
 - kill -(confirm)
     stops and quits the entire program
-
+- state
+    show whether the system is dispensing or not
 */
 int processCommand(char *input){
     char *cmd_buffer = (char*)calloc(MAX_LENGHT * sizeof(char), sizeof(char));
@@ -50,7 +53,6 @@ int processCommand(char *input){
         return EXIT_SUCCESS;
     }
     bool args_ok = true;
-    //printf("command: %s\nfirst parameter: %s\nsecond parameter %s\n", cmd_buffer, param_buffer_first, param_buffer_second);
     if(strncmp(cmd_buffer, "mode", 5) == 0)
     {
         pthread_mutex_lock(&config_mutex);
@@ -90,28 +92,17 @@ int processCommand(char *input){
             fprintf(stderr, "Currently running in automatic mode, to use run command switch to manual mode.\n");
             args_ok = false;
         }
-        /*if(config.dispensing){
-            fprintf(stderr, "The system is already dispensing, wait for the cycle to finish or terminate it to run again.\n");
-            args_ok = false;
-        }*/
         pthread_mutex_unlock(&config_mutex);
         countArguments(1, &args_ok, param_buffer_first, param_buffer_second);
         verifyArguments(&args_ok, param_buffer_first, param_buffer_second, 1);
-        /*if((args_ok && !checkArgument(param_buffer_first)) || (atoi(param_buffer_first) <= 0 && args_ok) || (atoi(param_buffer_first) > MAX_AMOUNT_PER_DAY  && args_ok)){
-            args_ok = false;
-            fprintf(stderr, "Invalid argument, provide a sufficient amount to be dispensed.\n");
-        }
-        if(args_ok && strncmp(param_buffer_second, "" , MAX_LENGHT) != 0){
-            args_ok = false;
-            fprintf(stderr, "Invalid arguments, provide only one argument.\n");
-        }*/
         if(args_ok){
             int amount = atoi(param_buffer_first);
             printf("The irrigation system will dispense %d liters of water.\nAre you sure you want proceed?\n[y/n]", amount);
             int ret = recieveConfirmation(input);
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
-                printf("Proceeding...\nLaunching irrigation for %d minutes.\n", getDispenseTime(amount));
+                if(getDispenseTime(amount) < 1) printf("Proceeding...\nLaunching irrigation for %0.f seconds.\n", getDispenseTime(amount)*60);
+                else printf("Proceeding...\nLaunching irrigation for %0.f minutelaunch_string", getDispenseTime(amount));
                 pthread_mutex_lock(&config_mutex);
                 config.amount_immidiate = amount;
                 pthread_mutex_unlock(&config_mutex);
@@ -121,29 +112,16 @@ int processCommand(char *input){
             }   
         }   
     }
-    //TO DO: Rework and adapt the config command
     else if (strncmp(cmd_buffer, "config", 7) == 0)
     {
         if(strncmp(param_buffer_first, "", MAX_LENGHT) == 0 && strncmp(param_buffer_second, "" , MAX_LENGHT) == 0){
             args_ok = false;
             printConfig();
         }
-        /*pthread_mutex_lock(&config_mutex);
-        if(args_ok && config.dispensing){
-            fprintf(stderr, "Filtration is currently running. Cannot change config now.\n");
-            args_ok = false;
-        }
-        pthread_mutex_unlock(&config_mutex);*/
         verifyState(&args_ok, false);
-        //if(!checkArgument(param_buffer_first) || !checkArgument(param_buffer_second)) args_ok = false;
-
-        /*if((args_ok && atoi(param_buffer_first) <= 0) || (args_ok && atoi(param_buffer_second) <= 0)
-        || (args_ok && atoi(param_buffer_first) > MAX_DURATION) || (args_ok && atoi(param_buffer_second) > MAX_TIME)){
-            fprintf(stderr, "Provided parameters are invalid! USAGE: config [times per day] [amount](in liters)\n");
-            args_ok = false;
-        } */
         countArguments(2, &args_ok, param_buffer_first, param_buffer_second);
         verifyArguments(&args_ok, param_buffer_first, param_buffer_second, 2);
+
         if(args_ok){
             uint8_t new_times_per_day = atoi(param_buffer_first);
             uint16_t new_amount = atoi(param_buffer_second);
@@ -154,6 +132,7 @@ int processCommand(char *input){
                 pthread_mutex_lock(&config_mutex);
                 config.amount = new_amount;
                 config.times_per_day = new_times_per_day;
+                printf("Please enter %d times of day at which irrigation should commence.\n", config.times_per_day);
                 pthread_mutex_unlock(&config_mutex);
                 if(getTimeValues(input, new_times_per_day) == ALLOCATION_ERR) return ALLOCATION_ERR;
                 printf("Configuration set to:\n");
@@ -166,10 +145,6 @@ int processCommand(char *input){
     }
     else if (strncmp(cmd_buffer, "kill", 5) == 0)
     {
-        /*if(strncmp(param_buffer_first, "", MAX_LENGHT) != 0 || strncmp(param_buffer_second, "" , MAX_LENGHT) != 0){
-            fprintf(stderr, "This command does not take any parameters.\n");
-            args_ok = false;
-        }*/
         countArguments(0, &args_ok, param_buffer_first, param_buffer_second);
         if(args_ok){
             printf("WARNING! The irrigation system controler will be terminated.\nAre you sure you want proceed?\n[y/n]");
@@ -191,17 +166,7 @@ int processCommand(char *input){
     }
     else if (strncmp(cmd_buffer, "stop", 5) == 0)
     {
-        /*if(strncmp(param_buffer_first, "", MAX_LENGHT) != 0 || strncmp(param_buffer_second, "" , MAX_LENGHT) != 0){
-            fprintf(stderr, "This command does not take any parameters.\n");
-            args_ok = false;
-        }*/
         countArguments(0, &args_ok, param_buffer_first, param_buffer_second);
-        /*pthread_mutex_lock(&config_mutex);
-        if(!config.dispensing){
-            fprintf(stderr, "The system is currently not dispensing.\n");
-            args_ok = false;
-        }
-        pthread_mutex_unlock(&config_mutex);*/
         verifyState(&args_ok, true);
         if(args_ok && !checkDeviceState()){
             fprintf(stderr, "The system is currently not dispensing.\n");
@@ -391,16 +356,16 @@ bool isIntTime(int time_val){
 int readTimeFromUser(char **buffer){
     int ret = readCmd(buffer);
     if(ret < 0) return ret;
-    if(!checkArgument(buffer)) return LENGHT_ERR;
+    if(!checkArgument(*buffer)) return LENGHT_ERR;
     return atoi(*buffer);
 }
 
-int getDispenseTime(uint16_t amount){
-    return (amount*60)/LITERS_PER_HOUR;
+float getDispenseTime(uint16_t amount){
+    return ((float)amount*(float)60)/(float)LITERS_PER_HOUR;
 }
 
 bool isDispensingTime(int curtime){
-    for (size_t i = 0; i < config.times_per_day; i++)
+    for (int i = 0; i < config.times_per_day; i++)
     {
         if (config.time_routine[i] == curtime) return true;
     }
@@ -411,18 +376,18 @@ void printConfig(){
     pthread_mutex_lock(&config_mutex);
     const char *conf_string = (config.mode == AUTO) ? "Mode: AUTOMATIC\nAmount of: %d l\nDispensing %d times per day at these times:\n":
                                                         "Mode: MANUAL\nAmount of: %d l\nDispensing %d times per day at these times:\n";
-    printf("%s", conf_string, config.amount, config.times_per_day);
-    for (size_t i = 0; i < config.times_per_day; i++)
+    printf(conf_string, config.amount, config.times_per_day);
+    for (int i = 0; i < config.times_per_day; i++)
     {
         const char *time_string = ((config.time_routine[i] % 100) < 10) ? "%d:0%d " : "%d:%d ";
-        printf("%s", time_string, config.time_routine[i]/100, config.time_routine[i] % 100);
+        printf(time_string, config.time_routine[i]/100, config.time_routine[i] % 100);
     }
     putchar('\n');
     pthread_mutex_unlock(&config_mutex);
 }
 
 void verifyState(bool *args_ok, bool desiredOn){
-    if(!args_ok) return;
+    if((*args_ok) == false) return;
     if(checkDeviceState()){
         if(desiredOn) return;
         *args_ok = false;
@@ -436,7 +401,7 @@ void verifyState(bool *args_ok, bool desiredOn){
 }
 
 void countArguments(int desired_count, bool *args_ok, char *first_param, char *second_param){
-    if(!(*args_ok)) return;
+    if((*args_ok) == false) return;
     switch (desired_count)
     {
     case 0:
@@ -464,16 +429,17 @@ void countArguments(int desired_count, bool *args_ok, char *first_param, char *s
     }
 }
 
-//TO DO: Implement the checkInterval() function
 int getTimeValues(char *buffer, int times_per_day){
     pthread_mutex_lock(&config_mutex);
-    uint16_t *tmp = (uint16_t*)realloc(config.time_routine, sizeof(uint16_t) * config.times_per_day);
+    uint16_t *tmp = (uint16_t*)realloc(config.time_routine, sizeof(uint16_t) * times_per_day);
     //malloc check
     if(tmp == NULL || buffer == NULL){
         fprintf(stderr, ALLOC_ERR_MSG);
         return ALLOCATION_ERR;
     }
     config.time_routine = tmp;
+    config.times_per_day = times_per_day;
+    pthread_mutex_unlock(&config_mutex);
     //get a time values and put the in the array
     int index = 0;
     while(true){
@@ -486,49 +452,67 @@ int getTimeValues(char *buffer, int times_per_day){
             fprintf(stderr, INVALID_TIME_INPUT);
             continue;
         }
-        if(!checkIntervals(time)){
+        pthread_mutex_lock(&config_mutex);
+        if(!checkIntervals(time, index)) {
             fprintf(stderr, INVALID_INTERVAL_MSG);
+            pthread_mutex_unlock(&config_mutex);
             continue;
         }
-        char *time_string = (time % 100 > 10) ? "Added %d:%d" : "Added %d:0%d";
-        printf("%s", time_string, time/100, time%100);
+        char *time_string = (time % 100 >= 10) ? "Added %d:%d\n" : "Added %d:0%d\n";
+        printf(time_string, time/100, time%100);
         config.time_routine[index] = time;
         index++;
-        if(index >= config.times_per_day) break;
+        pthread_mutex_unlock(&config_mutex);
+        if(index >= times_per_day) break;
     }
-    pthread_mutex_unlock(&config_mutex);
     return EXIT_SUCCESS;
 }
 
 void verifyArguments(bool *args_ok, char *first_arg, char *second_arg, int desired_count){
+    if((*args_ok) == false) return;
     switch (desired_count){
     case 1:
         if(!checkArgument(first_arg)){
             *args_ok = false;
-            fprintf(stderr, "Invalid argument! Please provide a number of liters to be dispensed.\n");
+            fprintf(stderr, INVALID_NUMBER_AMOUNT_MSG);
             break;
         }
         if(atoi(first_arg) > MAX_AMOUNT_PER_DAY || atoi(first_arg) <= 0){
             *args_ok = false;
-            fprintf(stderr, "Invalid amount! Please provide a number of liters to be dispensed, %d liters at most.\n", MAX_AMOUNT_PER_DAY);
+            fprintf(stderr, INVALID_ONE_TIME_AMOUNT_MSG, MAX_AMOUNT_PER_DAY);
         }
         break;
     
     case 2:
         if(!checkArgument(first_arg) || !checkArgument(second_arg)){
             *args_ok = false;
-            fprintf(stderr, "Provided parameters are invalid! PROVIDE: [times per day] [amount](in liters)\n");
+            fprintf(stderr, INVALID_ARGS_MSG);
             break;    
         } 
         if((atoi(first_arg) * atoi(second_arg)) > MAX_AMOUNT_PER_DAY){
             *args_ok = false;
-            fprintf(stderr, "The system can dispense at most %d liters of water per day. Choose a lower amount or set less cycles per day.\n", MAX_AMOUNT_PER_DAY);
+            fprintf(stderr, INVALID_AMOUNT_MSG, MAX_AMOUNT_PER_DAY);
             break;
         }
         if(atoi(first_arg) > MAX_TIMES_PER_DAY){
             *args_ok = false;
-            fprintf(stderr, "The system can dispense at most %d liters of water per day. Choose a lower amount or set less cycles per day.\n", MAX_AMOUNT_PER_DAY);
+            fprintf(stderr, INVALID_CYCLES_NUMBER_MSG, MAX_TIMES_PER_DAY);
         }
         break;
     }
+}
+bool checkIntervals(int time, int time_count){
+    for (int i = 0; i < time_count; i++)
+    {
+        if(getMinutesBetweenTimes(config.time_routine[i], time) < MIN_INTERVAL) return false;
+    }
+    return true;
+}
+
+int getMinutesBetweenTimes(int time_1, int time_2){
+    int minutes_1 = time_1 % 100;
+    int hours_1 = time_1 / 100;
+    int minutes_2 = (time_2 % 100)*(-1);
+    int hours_2 = (time_2 / 100)*(-1);
+    return abs(((hours_1 + hours_2)*60) +  minutes_1 + minutes_2);   
 }

@@ -16,7 +16,7 @@ int initGpioPinControl();
 bool checkDeviceState();
 
 //dispenses water for a certain amount of time
-void runIrrigation(int duration);
+void runIrrigation(float duration);
 
 //turns off the water pump
 void shutdownWaterPump();

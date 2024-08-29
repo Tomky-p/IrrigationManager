@@ -33,6 +33,9 @@ int main(int argc, char *argv[]){
     }
     bool args_ok = true;
     verifyArguments(&args_ok, argv[2], argv[3], 2);
+    if(!args_ok) return EXIT_FAILURE;
+    config.times_per_day = atoi(argv[2]);
+    config.amount = atoi(argv[3]);
     /*
     int arg_value = 0;
     if(checkArgument(argv[2]) == false){
@@ -100,16 +103,6 @@ int main(int argc, char *argv[]){
     //print config
     printf("Starting with following configuration:\n");
     printConfig();
-    /*
-    const char *start_string = (config.mode == AUTO) ? "Starting with following configuration:\nMode: AUTOMATIC\nAmount of: %d l\nDispensing %d times per day at these times: " :
-                                                        "Starting with following configuration:\nMode: MANUAL\nAmount of: %d l\nDispensing %d times per day at these times: ";
-    printf("%s", start_string, config.amount, config.times_per_day);
-    for (size_t i = 0; i < config.times_per_day; i++)
-    {
-        const char *time_string = ((config.time_routine[i] % 100) < 10) ? "%d:0%d " : "%d:%d ";
-        printf("%s", time_string, config.time_routine[i]/100, config.time_routine[i] % 100);
-    }
-    putchar('\n');*/
 
     int *IC_thread_result;
     int *CMD_thread_result;
@@ -125,7 +118,7 @@ int main(int argc, char *argv[]){
         pthread_mutex_destroy(&config_mutex);
         return EXIT_FAILURE;
     }
-    if(pthread_create(&irrigationControl, NULL, automaticController, NULL) != 0){
+    if(pthread_create(&irrigationControl, NULL, irrigationController, NULL) != 0){
         fprintf(stderr, "FATAL ERR! Failed to create automatic filtration thread.\n");
         pthread_mutex_destroy(&config_mutex);
         return EXIT_FAILURE;
@@ -154,17 +147,18 @@ int main(int argc, char *argv[]){
 }
 
 
-void* automaticController(){   
+void* irrigationController(){   
     int *ret = malloc(sizeof(int));
     *ret = EXIT_SUCCESS;
     printf("Launching automatic filtration thread.\n");
     
     //initialize gpio pin interface
-    if(initGpioPinControl() == ALLOCATION_ERR){
+    /*if(initGpioPinControl() == ALLOCATION_ERR){
         config.running = false;
         *ret = GPIO_ERR;
         return (void*)ret;
-    }
+    }*/
+    int time_last_ran = TIME_ERR;
     pthread_mutex_lock(&config_mutex);
     while (config.running)
     {    
@@ -178,13 +172,14 @@ void* automaticController(){
         //printf("Running: %s\n", config.filtration_running ? "true" : "false");
         //printf("curtime: %d\n", curtime);
         
-        if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing){        
-            int duration = getDispenseTime(config.amount);
+        if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing && time_last_ran != curtime){
+            time_last_ran = curtime;
+            float duration = getDispenseTime(config.amount);
             pthread_mutex_unlock(&config_mutex);
             runIrrigation(duration);
         }
         else if(config.mode == MANUAL && config.amount_immidiate > 0){
-            int duration = getDispenseTime(config.amount_immidiate);
+            float duration = getDispenseTime(config.amount_immidiate);
             //invalidate the run until time
             config.amount_immidiate = 0; 
             pthread_mutex_unlock(&config_mutex);

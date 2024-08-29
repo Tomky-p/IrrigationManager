@@ -36,10 +36,15 @@
 #define INVALID_TIME_INPUT "Provided time is invalid. Provide a number corresponding to a time of day in format: 1135 = 11:35\n"
 #define SYSTEM_RUNNING_MSG "Cannot execute command the system is currently dispensing.\n"
 #define SYSTEM_NOT_RUNNING_MSG "Cannot execute command the system is currently not dispensing.\n"
-#define INVALID_INTERVAL_MSG "Times of day must have bigger intervals between each other.\n"
+#define INVALID_INTERVAL_MSG "Times of day must have bigger intervals between each other, atleast 4 hours.\n"
+#define INVALID_AMOUNT_MSG "The system can dispense at most %d liters of water per day. Choose a lower amount or set less cycles per day.\n"
+#define INVALID_CYCLES_NUMBER_MSG "The system can dispense at most %d times a day.\n"
+#define INVALID_ONE_TIME_AMOUNT_MSG "Invalid amount! Please provide a number of liters to be dispensed, %d liters at most.\n"
+#define INVALID_NUMBER_AMOUNT_MSG "Invalid argument! Please provide a number of liters to be dispensed.\n"
+#define INVALID_ARGS_MSG "Provided parameters are invalid! PROVIDE: [times per day] [amount](in liters)\n"
 
 //INFO messages
-#define HELP_MESSAGE "LIST OF ALL COMMANDS\n- mode [mode] -(confirm)\n  changes mode of the system\n    parameters:\n    (mode) -a automatic operation -m manual\n- run [duration] -(confirm)\n    run in watering cycle in manual mode\n    parameters:\n    (int) duration in liters to be dispensed\n- config [duration] [time] -(confirm)\n    change the config for automatic mode\n    parameters:\n    (int) new duration per cycle in liters\n    (int) new time per cycle in minutes\n- stop -(confirm)\n    stops the current filtration cycle\n- kill -(confirm)\n    stops and quits the entire program\n"
+#define HELP_MESSAGE "LIST OF ALL COMMANDS\n- mode [mode]\n  changes mode of the system\n    parameters:\n    (mode) -a automatic operation -m manual\n   - without parameters: show the current mode\n- run [amount] -(confirm)\n    run in watering cycle in manual mode\n    parameters:\n    (int) amount in liters to be dispensed\n- config [times per day] [amount] -(confirm)\n    change the config for automatic mode\n    parameters:\n    (int) new number of cycles per day\n    (int) new amount to be dispensed per cycle\n    - without paramater: prints current config\n- stop -(confirm)\n    stops the water pump\n- kill -(confirm)\n    stops and quits the entire program\n- state\n    show whether the system is dispensing or not\n"
 
 //mode values
 #define AUTO 1
@@ -53,7 +58,7 @@
 
 #ifndef MIN_INTERVAL
 //Time in between each release of water into the system (in minutes)
-#define MIN_INTERVAL 360
+#define MIN_INTERVAL 239
 #endif
 
 #ifndef MAX_TIMES_PER_DAY
@@ -109,7 +114,7 @@ int getCurrentTime();
 bool isIntTime(int time_val);
 
 //returns how many minutes it takes to dispense a certain amount of water
-int getDispenseTime(uint16_t amount);
+float getDispenseTime(uint16_t amount);
 
 //read a time value from user
 int readTimeFromUser(char **buffer);
@@ -117,12 +122,20 @@ int readTimeFromUser(char **buffer);
 //returns true the its time to dispence water according to config
 bool isDispensingTime(int curtime);
 
+//prints the current configuration
 void printConfig();
 
+//reads and saves time values from user to config
 int getTimeValues(char *buffer, int times_per_day);
 
+//verifies wether the arguments are valid
 void verifyArguments(bool *args_ok, char *first_arg, char *second_arg, int desired_count);
 
+//verifies wether the correct amount of arguments was provided
 void countArguments(int desired_count, bool *args_ok, char *first_param, char *second_param);
 
 void verifyState(bool *args_ok, bool desiredOn);
+
+bool checkIntervals(int time, int time_count);
+
+int getMinutesBetweenTimes(int time_1, int time_2);
