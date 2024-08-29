@@ -66,11 +66,6 @@
 #define MAX_TIMES_PER_DAY 6
 #endif
 
-#ifndef LOCATION
-//Geographic location name used to pull weather data
-#define LOCATION "Poděbrady"
-#endif
-
 #define YES 1
 #define NO 0
 

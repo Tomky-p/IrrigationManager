@@ -5,11 +5,11 @@
 #include <time.h>
 #include "weather_utils.h"
 
-bool getCurrentWeather(struct json_object *weather_data){
+bool getCurrentWeather(struct json_object *weather_data, char *url){
     return true;
 }
 
-bool getWeatherForecast(struct json_object *weather_data, uint8_t days){
+bool getWeatherForecast(struct json_object *weather_data, uint8_t days, char *url){
     return true;
 
 }
