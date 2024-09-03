@@ -158,6 +158,7 @@ void* irrigationController(){
         *ret = GPIO_ERR;
         return (void*)ret;
     }*/
+    //initialize api request parameters
     int time_last_ran = TIME_ERR;
     pthread_mutex_lock(&config_mutex);
     while (config.running)
@@ -168,10 +169,6 @@ void* irrigationController(){
             fprintf(stderr, "%s", TIME_ERR_MSG);
             break;
         }
-        //printf("Mode: %d\n", config.mode);
-        //printf("Running: %s\n", config.filtration_running ? "true" : "false");
-        //printf("curtime: %d\n", curtime);
-        
         if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing && time_last_ran != curtime){
             time_last_ran = curtime;
             float duration = getDispenseTime(config.amount);

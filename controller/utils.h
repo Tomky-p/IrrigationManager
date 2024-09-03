@@ -31,6 +31,7 @@
 #define GPIO_ERR_MSG "FATAL ERR! Failed to initialize access to GPIO periferies.\n"
 #define WEATHER_ERR_MSG "CRITICAL ERR! Failed to get weather. Connection failed or API not responding.\n"
 #define CONNECTION_ERR_MSG "CRITICAL ERR! Connection lost.\n"
+#define FILE_NOT_FOUND_ERR_MSG "CRITICAL ERR! Failed to read file %s.\n"
 
 //USER ERR messages
 #define INVALID_TIME_INPUT "Provided time is invalid. Provide a number corresponding to a time of day in format: 1135 = 11:35\n"

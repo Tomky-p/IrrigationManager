@@ -102,7 +102,7 @@ int processCommand(char *input){
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
                 if(getDispenseTime(amount) < 1) printf("Proceeding...\nLaunching irrigation for %0.f seconds.\n", getDispenseTime(amount)*60);
-                else printf("Proceeding...\nLaunching irrigation for %0.f minutelaunch_string", getDispenseTime(amount));
+                else printf("Proceeding...\nLaunching irrigation for %0.f minutes.\n", getDispenseTime(amount));
                 pthread_mutex_lock(&config_mutex);
                 config.amount_immidiate = amount;
                 pthread_mutex_unlock(&config_mutex);
