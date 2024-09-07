@@ -7,17 +7,23 @@
 #define API_KEY_FILENAME "api_key.txt"
 #endif
 
-#ifndef API_KEY_LENGHT
 #define API_KEY_LENGHT 31
-#endif
 
 #ifndef LOCATION_FILENAME
 //Geographic location coordinates used to pull weather data
 #define LOCATION_FILENAME "coords.txt"
 #endif
 
-#ifndef BASE_URL_PRESENT "http://api.weatherapi.com/v1/current.json?key="
+#ifndef BASE_URL_FORECAST 
 #define BASE_URL_FORECAST "http://api.weatherapi.com/v1/forecast.json?key="
+#endif
+
+#ifndef BASE_URL_PRESENT 
+#define BASE_URL_PRESENT "http://api.weatherapi.com/v1/current.json?key="
+#endif
+
+#ifndef DAYS_TO_FORECAST
+#define DAYS_TO_FORECAST 1
 #endif
 
 #define FILE_NOT_FOUND_ERR -1
@@ -35,13 +41,19 @@
 #define NO_API_KEY_ERR_MSG "ERR! No API key provided.\n"
 
 typedef struct{
-    char api_key[API_KEY_LENGHT];
-    char *coordinates;
-}request_data_t;
+    char *api_key;
+    char *coords;
+    uint8_t days;
+}req_params_t;
 
 
-int getCurrentWeather(struct json_object *weather_data, char *url);
+int getCurrentWeather(struct json_object *weather_data, req_params_t *req_data);
 
-int getWeatherForecast(struct json_object *weather_data, uint8_t days, char *url);
+int getWeatherForecast(struct json_object *weather_data, uint8_t days, req_params_t *req_data);
 
-int evaluateWeatherData(struct json_object *weather_data);
+int evaluateWeatherData(struct json_object *weather_data, req_params_t *req_data);
+
+int getRequestData(req_params_t *req_params);
+
+int readDataFromFile(char *filename, char **buffer);
+

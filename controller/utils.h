@@ -8,6 +8,7 @@
 //Conversion constants
 #define DAY_IN_MINUTES 1440
 #define MAX_TIME 2359
+#define MIDNIGHT 0
 
 #ifndef LITERS_PER_HOUR
 //the amount of water flowing into the system per hour (based on the water pump)
@@ -83,6 +84,8 @@ typedef struct{
     uint16_t amount_immidiate;
     //amount dispensed today
     float amount_dispensed;
+    //time at which
+    uint16_t time_last_ran;
     //indicates the state of the program
     bool running;
     //indicates whether the system is dispensing water currently
@@ -103,7 +106,7 @@ int processCommand(char *input);
 
 bool splitToBuffers(char *input, char *cmd_buffer, char *param_buffer_first, char *param_buffer_second);
 
-int recieveConfirmation(char *command);
+int recieveConfirmation(char **command);
 
 int getCurrentTime();
 
@@ -122,7 +125,7 @@ bool isDispensingTime(int curtime);
 void printConfig();
 
 //reads and saves time values from user to config
-int getTimeValues(char *buffer, int times_per_day);
+int getTimeValues(int times_per_day);
 
 //verifies wether the arguments are valid
 void verifyArguments(bool *args_ok, char *first_arg, char *second_arg, int desired_count);

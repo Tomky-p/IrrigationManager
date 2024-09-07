@@ -1,6 +1,6 @@
 CC = clang
 
-CFLAGS = -Wall -std=c11 -pedantic -Wextra -g
+CFLAGS = -Wall -std=c11 -pedantic -Wextra #-g
 
 LDFLAGS = -lwiringPi -lcurl
 

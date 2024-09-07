@@ -36,69 +36,21 @@ int main(int argc, char *argv[]){
     if(!args_ok) return EXIT_FAILURE;
     config.times_per_day = atoi(argv[2]);
     config.amount = atoi(argv[3]);
-    /*
-    int arg_value = 0;
-    if(checkArgument(argv[2]) == false){
-        fprintf(stderr, "Invalid argument, provided times_per_day is not an interger or is too large.\n");
-        return EXIT_FAILURE;
-    }
-    arg_value = atoi(argv[2]);
-    if(arg_value > MAX_TIMES_PER_DAY){
-        fprintf(stderr, "Invalid argument, selected an times_per_day shorter that the minimum lenght.\n");
-        return EXIT_FAILURE;
-    }
-    config.times_per_day = arg_value;
 
-    if(checkArgument(argv[3]) == false){
-        fprintf(stderr, "Invalid argument, provided amount is not an interger or is too large.\n");
-        return EXIT_FAILURE;
-    }
-    arg_value = atoi(argv[3]);
-    if(arg_value <= 0 || arg_value > MAX_AMOUNT_PER_DAY){
-        fprintf(stderr, "Invalid argument, selected amount higher that the maximum amount.\n");
-        return EXIT_FAILURE;
-    }
-    config.amount = arg_value;*/
-
+    //get times of day
     printf("Please enter %d times of day at which irrigation should commence.\n", config.times_per_day);
 
-    char *command = (char*)malloc(STARTING_CAPACITY);
+    //char *time_val = (char*)malloc(STARTING_CAPACITY);
     config.time_routine = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
-    if(getTimeValues(command, config.times_per_day) == ALLOCATION_ERR){
+    if(getTimeValues(config.times_per_day) == ALLOCATION_ERR){
         return ALLOCATION_ERR;
     }
-    /*
-    //malloc check
-    if(config.time_routine == NULL || command == NULL){
-        fprintf(stderr, "FATAL ERR! Memory allocation failed.\n");
-        return ALLOCATION_ERR;
-    }
-    //get a time values and put the in the array
-    int index = 0;
-    while(true){
-        int time = readTimeFromUser(&command);
-        if(time == ALLOCATION_ERR){
-            fprintf(stderr, "FATAL ERR! Memory allocation failed.\n");
-            return ALLOCATION_ERR;
-        }
-        if(!isIntTime(time)){
-            fprintf(stderr, INVALID_TIME_INPUT);
-            continue;
-        }
-        if(!checkIntervals(time)){
-            fprintf(stderr, "Times of day must have bigger intervals between each other.\n");
-            continue;
-        }
-
-        printf("Added %d:");
-        config.time_routine[index] = time;
-        index++;
-        if(index >= config.times_per_day) break;
-    }*/
-    free(command);
+    //free(time_val);
+    //set everything going
     config.running = true;
     config.dispensing = false;
     config.amount_immidiate = 0;
+    config.time_last_ran = TIME_ERR;
     
     //print config
     printf("Starting with following configuration:\n");
@@ -140,6 +92,7 @@ int main(int argc, char *argv[]){
     int CMD_ret = *CMD_thread_result;
     free(IC_thread_result);
     free(CMD_thread_result);
+    free(config.time_routine);
 
     if(IC_ret != EXIT_SUCCESS) return IC_ret;
     if(CMD_ret != EXIT_SUCCESS) return CMD_ret;
@@ -159,7 +112,13 @@ void* irrigationController(){
         return (void*)ret;
     }*/
     //initialize api request parameters
-    int time_last_ran = TIME_ERR;
+    //req_params_t request_params;
+    /*if((*ret = getRequestData(&request_params)) != EXIT_SUCCESS){
+        pthread_mutex_lock(&config_mutex);
+        config.running = false;
+        pthread_mutex_unlock(&config_mutex);
+        return (void*)ret;
+    }*/
     pthread_mutex_lock(&config_mutex);
     while (config.running)
     {    
@@ -169,8 +128,10 @@ void* irrigationController(){
             fprintf(stderr, "%s", TIME_ERR_MSG);
             break;
         }
-        if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing && time_last_ran != curtime){
-            time_last_ran = curtime;
+        if(curtime == MIDNIGHT) config.amount_dispensed = 0;
+        //Implement weather checks
+        if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing && config.time_last_ran != curtime){
+            config.time_last_ran = curtime;
             float duration = getDispenseTime(config.amount);
             pthread_mutex_unlock(&config_mutex);
             runIrrigation(duration);
@@ -190,6 +151,8 @@ void* irrigationController(){
         pthread_mutex_lock(&config_mutex);
     }
     pthread_mutex_unlock(&config_mutex);
+    //free(request_params.api_key);
+    //free(request_params.coords);
     config.running = false;
     return (void*)ret;
 }
@@ -211,7 +174,6 @@ void* cmdManager(){
         pthread_mutex_unlock(&config_mutex);
         *ret = readCmd(&command);
         if(*ret == READING_SUCCESS){
-            //printf("Executing: %s\n", command);
             *ret = processCommand(command);
         }
         if(*ret == ALLOCATION_ERR){
