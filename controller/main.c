@@ -40,12 +40,11 @@ int main(int argc, char *argv[]){
     //get times of day
     printf("Please enter %d times of day at which irrigation should commence.\n", config.times_per_day);
 
-    //char *time_val = (char*)malloc(STARTING_CAPACITY);
-    config.time_routine = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
-    if(getTimeValues(config.times_per_day) == ALLOCATION_ERR){
+    config.time_routine = NULL;
+    uint16_t *vals = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
+    if(getTimeValues(vals, config.times_per_day) == ALLOCATION_ERR){
         return ALLOCATION_ERR;
     }
-    //free(time_val);
     //set everything going
     config.running = true;
     config.dispensing = false;

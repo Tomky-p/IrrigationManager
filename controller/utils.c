@@ -12,7 +12,7 @@ config_t config = {0};
 pthread_mutex_t config_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
-//LIST OF ALL COMMANDS
+LIST OF ALL COMMANDS
 - mode [mode]
     changes mode of the system
     parameters:
@@ -134,12 +134,16 @@ int processCommand(char *input){
             free(buffer);
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
+                //pthread_mutex_lock(&config_mutex);
+                //config.amount = new_amount;
+                //config.times_per_day = new_times_per_day;
+                printf("Please enter %d times of day at which irrigation should commence.\n", new_times_per_day);
+                //pthread_mutex_unlock(&config_mutex);
+                uint16_t *vals = (uint16_t*)malloc(sizeof(uint16_t) * new_times_per_day);
+                if(getTimeValues(vals, new_times_per_day) == ALLOCATION_ERR) return ALLOCATION_ERR;
                 pthread_mutex_lock(&config_mutex);
                 config.amount = new_amount;
-                config.times_per_day = new_times_per_day;
-                printf("Please enter %d times of day at which irrigation should commence.\n", config.times_per_day);
                 pthread_mutex_unlock(&config_mutex);
-                if(getTimeValues(new_times_per_day) == ALLOCATION_ERR) return ALLOCATION_ERR;
                 printf("Configuration set to:\n");
                 printConfig();
             }
@@ -438,17 +442,17 @@ void countArguments(int desired_count, bool *args_ok, char *first_param, char *s
     }
 }
 
-int getTimeValues(int times_per_day){
-    pthread_mutex_lock(&config_mutex);
-    uint16_t *tmp = (uint16_t*)realloc(config.time_routine, sizeof(uint16_t) * times_per_day);
+int getTimeValues(uint16_t *vals, int times_per_day){
+    //pthread_mutex_lock(&config_mutex);
+    //uint16_t *tmp = (uint16_t*)realloc(config.time_routine, sizeof(uint16_t) * times_per_day);
     //malloc check
-    if(tmp == NULL /*|| buffer == NULL*/){
+    /*if(tmp == NULL){
         fprintf(stderr, ALLOC_ERR_MSG);
         return ALLOCATION_ERR;
-    }
-    config.time_routine = tmp;
-    config.times_per_day = times_per_day;
-    pthread_mutex_unlock(&config_mutex);
+    }*/
+    //config.time_routine = tmp;
+    //config.times_per_day = times_per_day;
+    //pthread_mutex_unlock(&config_mutex);
     //get a time values and put the in the array
     int index = 0;
     while(true){
@@ -463,19 +467,25 @@ int getTimeValues(int times_per_day){
             fprintf(stderr, INVALID_TIME_INPUT);
             continue;
         }
-        pthread_mutex_lock(&config_mutex);
-        if(!checkIntervals(time, index)) {
+        //pthread_mutex_lock(&config_mutex);
+        if(!checkIntervals(time, index, vals)) {
             fprintf(stderr, INVALID_INTERVAL_MSG);
-            pthread_mutex_unlock(&config_mutex);
+            //pthread_mutex_unlock(&config_mutex);
             continue;
         }
         char *time_string = (time % 100 >= 10) ? "Added %d:%d\n" : "Added %d:0%d\n";
         printf(time_string, time/100, time%100);
-        config.time_routine[index] = time;
+        //config.time_routine[index] = time;
+        //pthread_mutex_unlock(&config_mutex);
+        vals[index] = time;
         index++;
-        pthread_mutex_unlock(&config_mutex);
         if(index >= times_per_day) break;
     }
+    pthread_mutex_lock(&config_mutex);
+    if(config.time_routine != NULL) free(config.time_routine);
+    config.time_routine = vals;
+    config.times_per_day = times_per_day;
+    pthread_mutex_unlock(&config_mutex);
     return EXIT_SUCCESS;
 }
 
@@ -512,10 +522,10 @@ void verifyArguments(bool *args_ok, char *first_arg, char *second_arg, int desir
         break;
     }
 }
-bool checkIntervals(int time, int time_count){
+bool checkIntervals(int time, int time_count, uint16_t *time_vals){
     for (int i = 0; i < time_count; i++)
     {
-        if(getMinutesBetweenTimes(config.time_routine[i], time) < MIN_INTERVAL) return false;
+        if(getMinutesBetweenTimes(time_vals[i], time) < MIN_INTERVAL) return false;
     }
     return true;
 }

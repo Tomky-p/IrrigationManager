@@ -125,7 +125,7 @@ bool isDispensingTime(int curtime);
 void printConfig();
 
 //reads and saves time values from user to config
-int getTimeValues(int times_per_day);
+int getTimeValues(uint16_t *vals, int times_per_day);
 
 //verifies wether the arguments are valid
 void verifyArguments(bool *args_ok, char *first_arg, char *second_arg, int desired_count);
@@ -135,6 +135,6 @@ void countArguments(int desired_count, bool *args_ok, char *first_param, char *s
 
 void verifyState(bool *args_ok, bool desiredOn);
 
-bool checkIntervals(int time, int time_count);
+bool checkIntervals(int time, int time_count, uint16_t *time_vals);
 
 int getMinutesBetweenTimes(int time_1, int time_2);
