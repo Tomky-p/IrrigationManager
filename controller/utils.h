@@ -12,7 +12,7 @@
 
 #ifndef LITERS_PER_HOUR
 //the amount of water flowing into the system per hour (based on the water pump)
-#define LITERS_PER_HOUR 240
+#define LITERS_PER_HOUR 1200
 #endif
 
 //String constants
@@ -63,9 +63,16 @@
 #define MIN_INTERVAL 239
 #endif
 
+#ifndef VOLUME
+//Total volume of water body when full
+#define VOLUME 250
+#endif
+
+#define REVERSE_INTERVAL DAY_IN_MINUTES - MIN_INTERVAL
+
 #ifndef MAX_TIMES_PER_DAY
 //maximum number of times per the system runs per day
-#define MAX_TIMES_PER_DAY 6
+#define MAX_TIMES_PER_DAY 4
 #endif
 
 #define YES 1
@@ -106,7 +113,7 @@ int processCommand(char *input);
 
 bool splitToBuffers(char *input, char *cmd_buffer, char *param_buffer_first, char *param_buffer_second);
 
-int recieveConfirmation(char **command);
+int recieveConfirmation();
 
 int getCurrentTime();
 
@@ -116,7 +123,7 @@ bool isIntTime(int time_val);
 float getDispenseTime(uint16_t amount);
 
 //read a time value from user
-int readTimeFromUser(char **buffer);
+int readTimeFromUser();
 
 //returns true the its time to dispence water according to config
 bool isDispensingTime(int curtime);
@@ -125,7 +132,7 @@ bool isDispensingTime(int curtime);
 void printConfig();
 
 //reads and saves time values from user to config
-int getTimeValues(uint16_t *vals, int times_per_day);
+int getTimeValues(int times_per_day);
 
 //verifies wether the arguments are valid
 void verifyArguments(bool *args_ok, char *first_arg, char *second_arg, int desired_count);

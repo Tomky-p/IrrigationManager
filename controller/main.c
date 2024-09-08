@@ -41,8 +41,9 @@ int main(int argc, char *argv[]){
     printf("Please enter %d times of day at which irrigation should commence.\n", config.times_per_day);
 
     config.time_routine = NULL;
-    uint16_t *vals = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
-    if(getTimeValues(vals, config.times_per_day) == ALLOCATION_ERR){
+    //uint16_t *vals = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
+    if(getTimeValues(/*vals,*/ config.times_per_day) == ALLOCATION_ERR){
+        fprintf(stderr, "%s", ALLOC_ERR_MSG);
         return ALLOCATION_ERR;
     }
     //set everything going

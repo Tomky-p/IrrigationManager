@@ -99,9 +99,7 @@ int processCommand(char *input){
         if(args_ok){
             int amount = atoi(param_buffer_first);
             printf("The irrigation system will dispense %d liters of water.\nAre you sure you want proceed?\n[y/n]", amount);
-            char *buffer = (char*)malloc(STARTING_CAPACITY);
-            int ret = recieveConfirmation(&buffer);
-            free(buffer);
+            int ret = recieveConfirmation();
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
                 if(getDispenseTime(amount) < 1) printf("Proceeding...\nLaunching irrigation for %0.f seconds.\n", getDispenseTime(amount)*60);
@@ -129,18 +127,11 @@ int processCommand(char *input){
             uint8_t new_times_per_day = atoi(param_buffer_first);
             uint16_t new_amount = atoi(param_buffer_second);
             printf("Set new configuration?\nCycles per day: %d\nAmount: %d l\nAre you sure you want proceed?\n[y/n]", new_times_per_day, new_amount);
-            char *buffer = (char*)malloc(STARTING_CAPACITY);
-            int ret = recieveConfirmation(&buffer);
-            free(buffer);
+            int ret = recieveConfirmation();
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
-                //pthread_mutex_lock(&config_mutex);
-                //config.amount = new_amount;
-                //config.times_per_day = new_times_per_day;
                 printf("Please enter %d times of day at which irrigation should commence.\n", new_times_per_day);
-                //pthread_mutex_unlock(&config_mutex);
-                uint16_t *vals = (uint16_t*)malloc(sizeof(uint16_t) * new_times_per_day);
-                if(getTimeValues(vals, new_times_per_day) == ALLOCATION_ERR) return ALLOCATION_ERR;
+                if(getTimeValues( new_times_per_day) == ALLOCATION_ERR) return ALLOCATION_ERR;
                 pthread_mutex_lock(&config_mutex);
                 config.amount = new_amount;
                 pthread_mutex_unlock(&config_mutex);
@@ -157,9 +148,7 @@ int processCommand(char *input){
         countArguments(0, &args_ok, param_buffer_first, param_buffer_second);
         if(args_ok){
             printf("WARNING! The irrigation system controler will be terminated.\nAre you sure you want proceed?\n[y/n]");
-            char *buffer = (char*)malloc(STARTING_CAPACITY);
-            int ret = recieveConfirmation(&buffer);
-            free(buffer);
+            int ret = recieveConfirmation();
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
                 pthread_mutex_lock(&config_mutex);
@@ -185,9 +174,7 @@ int processCommand(char *input){
         }
         if(args_ok){
             printf("The system is currently dispensing.\nAre you sure you want stop irrigating?\n[y/n]");
-            char *buffer = (char*)malloc(STARTING_CAPACITY);
-            int ret = recieveConfirmation(&buffer);
-            free(buffer);
+            int ret = recieveConfirmation();
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
                 printf("Stopping filtration...\n");
@@ -200,7 +187,6 @@ int processCommand(char *input){
             }
         }   
     }
-     //TO DO implement the help and state command
     else if (strncmp(cmd_buffer, "help", 5) == 0)
     {
         printf("%s", HELP_MESSAGE);
@@ -345,11 +331,19 @@ bool splitToBuffers(char *input, char *cmd_buffer, char *param_buffer_first, cha
     return true;
 }
 
-int recieveConfirmation(char **buffer){
-    int ret = readCmd(buffer);
+int recieveConfirmation(){
+    char *buffer = (char*)malloc(STARTING_CAPACITY);
+    if(buffer == NULL) return ALLOCATION_ERR;
+    int ret = readCmd(&buffer);
     if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
-    if(ret != READING_SUCCESS || strncmp(*buffer, "y", 2) != 0) return NO;
-    else return YES;
+    if(ret != READING_SUCCESS || strncmp(buffer, "y", 2) != 0) {
+        free(buffer);
+        return NO;
+    }
+    else {
+        free(buffer);
+        return YES;
+    }
 }
 
 int getCurrentTime(){
@@ -366,11 +360,14 @@ bool isIntTime(int time_val){
     return true;
 }
 
-int readTimeFromUser(char **buffer){
-    int ret = readCmd(buffer);
-    if(ret < 0) return ret;
-    if(!checkArgument(*buffer)) return LENGHT_ERR;
-    return atoi(*buffer);
+int readTimeFromUser(){
+    char *buffer = (char*)malloc(STARTING_CAPACITY);
+    if(buffer == NULL) return ALLOCATION_ERR;
+    int ret = readCmd(&buffer);
+    if(!checkArgument(buffer)) ret = LENGHT_ERR;
+    else ret = atoi(buffer);
+    free(buffer);
+    return ret;
 }
 
 float getDispenseTime(uint16_t amount){
@@ -442,41 +439,24 @@ void countArguments(int desired_count, bool *args_ok, char *first_param, char *s
     }
 }
 
-int getTimeValues(uint16_t *vals, int times_per_day){
-    //pthread_mutex_lock(&config_mutex);
-    //uint16_t *tmp = (uint16_t*)realloc(config.time_routine, sizeof(uint16_t) * times_per_day);
-    //malloc check
-    /*if(tmp == NULL){
-        fprintf(stderr, ALLOC_ERR_MSG);
-        return ALLOCATION_ERR;
-    }*/
-    //config.time_routine = tmp;
-    //config.times_per_day = times_per_day;
-    //pthread_mutex_unlock(&config_mutex);
+int getTimeValues(int times_per_day){
+    uint16_t *vals = (uint16_t*)malloc(sizeof(uint16_t) * times_per_day);
+    if(vals == NULL) return ALLOCATION_ERR;
     //get a time values and put the in the array
     int index = 0;
     while(true){
-        char *buffer = (char*)malloc(STARTING_CAPACITY);
-        int time = readTimeFromUser(&buffer);
-        free(buffer);
-        if(time == ALLOCATION_ERR){
-            fprintf(stderr, ALLOC_ERR_MSG);
-            return ALLOCATION_ERR;
-        }
+        int time = readTimeFromUser();
+        if(time == ALLOCATION_ERR) return ALLOCATION_ERR;
         if(!isIntTime(time)){
             fprintf(stderr, INVALID_TIME_INPUT);
             continue;
         }
-        //pthread_mutex_lock(&config_mutex);
         if(!checkIntervals(time, index, vals)) {
             fprintf(stderr, INVALID_INTERVAL_MSG);
-            //pthread_mutex_unlock(&config_mutex);
             continue;
         }
         char *time_string = (time % 100 >= 10) ? "Added %d:%d\n" : "Added %d:0%d\n";
         printf(time_string, time/100, time%100);
-        //config.time_routine[index] = time;
-        //pthread_mutex_unlock(&config_mutex);
         vals[index] = time;
         index++;
         if(index >= times_per_day) break;
@@ -525,7 +505,9 @@ void verifyArguments(bool *args_ok, char *first_arg, char *second_arg, int desir
 bool checkIntervals(int time, int time_count, uint16_t *time_vals){
     for (int i = 0; i < time_count; i++)
     {
-        if(getMinutesBetweenTimes(time_vals[i], time) < MIN_INTERVAL) return false;
+        int minutes_apart = getMinutesBetweenTimes(time_vals[i], time);
+        if(minutes_apart < MIN_INTERVAL || minutes_apart > REVERSE_INTERVAL) return false;
+        
     }
     return true;
 }
