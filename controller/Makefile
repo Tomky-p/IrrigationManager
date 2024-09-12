@@ -2,7 +2,7 @@ CC = clang
 
 CFLAGS = -Wall -std=c11 -pedantic -Wextra #-g
 
-LDFLAGS = -lwiringPi -lcurl
+LDFLAGS = -lwiringPi -lcurl -ljson-c
 
 TARGET = IrrigationManager
 

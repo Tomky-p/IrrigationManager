@@ -57,7 +57,7 @@ int sendAPIRequest(char *url, struct json_object *weather_data){
 int getCurrentWeather(struct json_object *weather_data, req_params_t *params){
     //build the URL
     char url[200];
-    int lenght = snprintf(url, sizeof(url),"%s%s%s%s%s", BASE_URL_PRESENT, params->api_key, URL_QUERY, params->coords, URL_NO_AQ);
+    uint16_t lenght = snprintf(url, sizeof(url),"%s%s%s%s%s", BASE_URL_PRESENT, params->api_key, URL_QUERY, params->coords, URL_NO_AQ);
     if(lenght > sizeof(url)){
         fprintf(stderr, "%s", URL_COPY_ERR);
         return HTTP_INIT_ERR;
@@ -68,16 +68,15 @@ int getCurrentWeather(struct json_object *weather_data, req_params_t *params){
 
 int getWeatherForecast(struct json_object *weather_data, uint8_t days, req_params_t *params){
     char number[2];
-    int num_lenght = snprintf(number, sizeof(number),"%d", days);
+    uint16_t num_lenght = snprintf(number, sizeof(number),"%d", days);
     char url[250];
-    int lenght = snprintf(url, sizeof(url),"%s%s%s%s%s%s%s%s", BASE_URL_FORECAST, params->api_key, URL_QUERY, params->coords, URL_NO_OF_DAYS, number, URL_NO_AQ, URL_NO_ALERTS);
+    uint16_t lenght = snprintf(url, sizeof(url),"%s%s%s%s%s%s%s%s", BASE_URL_FORECAST, params->api_key, URL_QUERY, params->coords, URL_NO_OF_DAYS, number, URL_NO_AQ, URL_NO_ALERTS);
     if(lenght > sizeof(url) || num_lenght > sizeof(number)){
         fprintf(stderr, "%s", URL_COPY_ERR);
         return HTTP_INIT_ERR;
     }
     printf("API call URL: %s\n", url);
     return sendAPIRequest(url, weather_data);
-
 }
 
 int evaluateWeatherData(struct json_object *weather_data, req_params_t *params){

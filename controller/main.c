@@ -120,7 +120,8 @@ void* irrigationController(){
     }*/
     //initialize api request parameters
     req_params_t request_params;
-    request_params.api_key, request_params.coords = NULL;
+    request_params.api_key = NULL;
+    request_params.coords = NULL;
     if((*ret = getRequestData(&request_params)) != EXIT_SUCCESS){
         pthread_mutex_lock(&config_mutex); 
         config.running = false;
