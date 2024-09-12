@@ -49,8 +49,10 @@ typedef struct{
 
 int getCurrentWeather(struct json_object *weather_data, req_params_t *req_data);
 
+//makes an API request to get forecast for a specified number of days
 int getWeatherForecast(struct json_object *weather_data, uint8_t days, req_params_t *req_data);
 
+//process a json that is the result of the weather API call
 int evaluateWeatherData(struct json_object *weather_data, req_params_t *req_data);
 
 int getRequestData(req_params_t *req_params);

@@ -41,8 +41,7 @@ int main(int argc, char *argv[]){
     printf("Please enter %d times of day at which irrigation should commence.\n", config.times_per_day);
 
     config.time_routine = NULL;
-    //uint16_t *vals = (uint16_t*)malloc(sizeof(uint16_t) * config.times_per_day);
-    if(getTimeValues(/*vals,*/ config.times_per_day) == ALLOCATION_ERR){
+    if(getTimeValues(config.times_per_day) == ALLOCATION_ERR){
         fprintf(stderr, "%s", ALLOC_ERR_MSG);
         return ALLOCATION_ERR;
     }
@@ -63,6 +62,14 @@ int main(int argc, char *argv[]){
     pthread_t cmdMonitor;
     //irrigation executor thread
     pthread_t irrigationControl;
+
+    /*req_params_t request_params;
+    request_params.days = 0;
+    request_params.api_key, request_params.coords = NULL;
+    if((getRequestData(&request_params)) != EXIT_SUCCESS){
+        config.running = false;
+        return EXIT_FAILURE;
+    }*/
 
     //create threads
     if(pthread_create(&cmdMonitor, NULL, cmdManager, NULL) != 0){
@@ -100,7 +107,7 @@ int main(int argc, char *argv[]){
 }
 
 
-void* irrigationController(){   
+void* irrigationController(){  
     int *ret = malloc(sizeof(int));
     *ret = EXIT_SUCCESS;
     printf("Launching automatic filtration thread.\n");
@@ -112,13 +119,18 @@ void* irrigationController(){
         return (void*)ret;
     }*/
     //initialize api request parameters
-    //req_params_t request_params;
-    /*if((*ret = getRequestData(&request_params)) != EXIT_SUCCESS){
-        pthread_mutex_lock(&config_mutex);
+    req_params_t request_params;
+    request_params.days = 0;
+    request_params.api_key, request_params.coords = NULL;
+    if((*ret = getRequestData(&request_params)) != EXIT_SUCCESS){
+        pthread_mutex_lock(&config_mutex); 
         config.running = false;
         pthread_mutex_unlock(&config_mutex);
         return (void*)ret;
-    }*/
+    }
+
+    printf("%s\n", request_params.api_key);
+    printf("%s\n", request_params.coords);
     pthread_mutex_lock(&config_mutex);
     while (config.running)
     {    
@@ -151,8 +163,8 @@ void* irrigationController(){
         pthread_mutex_lock(&config_mutex);
     }
     pthread_mutex_unlock(&config_mutex);
-    //free(request_params.api_key);
-    //free(request_params.coords);
+    free(request_params.api_key);
+    free(request_params.coords);
     config.running = false;
     return (void*)ret;
 }
