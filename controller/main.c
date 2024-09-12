@@ -120,7 +120,6 @@ void* irrigationController(){
     }*/
     //initialize api request parameters
     req_params_t request_params;
-    request_params.days = 0;
     request_params.api_key, request_params.coords = NULL;
     if((*ret = getRequestData(&request_params)) != EXIT_SUCCESS){
         pthread_mutex_lock(&config_mutex); 
@@ -146,6 +145,8 @@ void* irrigationController(){
             config.time_last_ran = curtime;
             float duration = getDispenseTime(config.amount);
             pthread_mutex_unlock(&config_mutex);
+            //getWeather
+            //if(evaluateWeather)
             runIrrigation(duration);
         }
         else if(config.mode == MANUAL && config.amount_immidiate > 0){
