@@ -60,13 +60,13 @@ typedef struct {
 }Response_data;
 
 //makes an API request to get weather data for today
-int getCurrentWeather(struct json_object *weather_data, req_params_t *req_data);
+int getCurrentWeather(struct json_object **weather_data, req_params_t *req_data);
 
 //makes an API request to get forecast for a specified number of days
-int getWeatherForecast(struct json_object *weather_data, uint8_t days, req_params_t *req_data);
+int getWeatherForecast(struct json_object **weather_data, uint8_t days, req_params_t *req_data);
 
 //process a json that is the result of the weather API call
-int evaluateWeatherData(struct json_object *weather_data, req_params_t *req_data);
+int evaluateWeatherData(struct json_object **weather_data, req_params_t *req_data);
 
 //loads API key and coordinates from file
 int getRequestData(req_params_t *req_params);
@@ -75,5 +75,5 @@ int getRequestData(req_params_t *req_params);
 int readDataFromFile(char *filename, char **buffer);
 
 //makes API request based on the provided URL
-int sendAPIRequest(char *url, struct json_object *weather_data);
+int sendAPIRequest(char *url, struct json_object **weather_data);
 

@@ -23,7 +23,7 @@ size_t writeToBuffer(void *data, size_t size, size_t nmemb, void *userdata){
     return real_size;
 }
 
-int sendAPIRequest(char *url, struct json_object *weather_data){
+int sendAPIRequest(char *url, struct json_object **weather_data){
     CURL *curl;
     CURLcode res;
     Response_data raw_data;
@@ -35,8 +35,12 @@ int sendAPIRequest(char *url, struct json_object *weather_data){
     curl = curl_easy_init();
     if(curl == NULL){
         fprintf(stderr, HTTP_INIT_ERR_MSG);
+        curl_easy_cleanup(curl);
+        free(raw_data.data);
         return HTTP_INIT_ERR;
     }
+    //format URL
+    printf("API call URL: %s\n", url);
     //set options
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeToBuffer);
@@ -44,17 +48,19 @@ int sendAPIRequest(char *url, struct json_object *weather_data){
     //perform request
     res = curl_easy_perform(curl);
     if(res != CURLE_OK){
-        fprintf(stderr, "API returned ERR: %s", curl_easy_strerror(res));
+        fprintf(stderr, "API returned ERR: %s\n", curl_easy_strerror(res));
+        curl_easy_cleanup(curl);
+        free(raw_data.data);
         return res;
     }
     //parse and store data into json object
-    weather_data = json_tokener_parse(raw_data.data);
+    *weather_data = json_tokener_parse(raw_data.data);
     curl_easy_cleanup(curl);
     free(raw_data.data);
     return EXIT_SUCCESS;
 }
 
-int getCurrentWeather(struct json_object *weather_data, req_params_t *params){
+int getCurrentWeather(struct json_object **weather_data, req_params_t *params){
     //build the URL
     char url[200];
     uint16_t lenght = snprintf(url, sizeof(url),"%s%s%s%s%s", BASE_URL_PRESENT, params->api_key, URL_QUERY, params->coords, URL_NO_AQ);
@@ -62,11 +68,10 @@ int getCurrentWeather(struct json_object *weather_data, req_params_t *params){
         fprintf(stderr, "%s", URL_COPY_ERR);
         return HTTP_INIT_ERR;
     }
-    printf("API call URL: %s\n", url);
     return sendAPIRequest(url, weather_data);
 }
 
-int getWeatherForecast(struct json_object *weather_data, uint8_t days, req_params_t *params){
+int getWeatherForecast(struct json_object **weather_data, uint8_t days, req_params_t *params){
     char number[2];
     uint16_t num_lenght = snprintf(number, sizeof(number),"%d", days);
     char url[250];
@@ -75,11 +80,10 @@ int getWeatherForecast(struct json_object *weather_data, uint8_t days, req_param
         fprintf(stderr, "%s", URL_COPY_ERR);
         return HTTP_INIT_ERR;
     }
-    printf("API call URL: %s\n", url);
     return sendAPIRequest(url, weather_data);
 }
 
-int evaluateWeatherData(struct json_object *weather_data, req_params_t *params){
+int evaluateWeatherData(struct json_object **weather_data, req_params_t *params){
     return true;
 }
 
@@ -90,6 +94,16 @@ int getRequestData(req_params_t *req_params){
     if(api_file == ALLOCATION_ERR || coords_file == ALLOCATION_ERR) return ALLOCATION_ERR;
     if(api_file == FILE_NOT_FOUND_ERR || coords_file == FILE_NOT_FOUND_ERR) return FILE_NOT_FOUND_ERR;
 
+    CURL *curl = curl_easy_init();
+    char *formated_url = curl_easy_escape(curl, req_params->coords, 0);
+    if(formated_url == NULL){
+        fprintf(stderr, "%s", ALLOC_ERR_MSG);
+        curl_easy_cleanup(curl);
+        return ALLOCATION_ERR;
+    }
+    free(req_params->coords);
+    req_params->coords = formated_url;
+    curl_easy_cleanup(curl);
     return EXIT_SUCCESS;
 }
 
