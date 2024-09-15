@@ -4,6 +4,7 @@
 #include <string.h>
 #include "weather_utils.h"
 #include "gpio_utils.h"
+#include <json-c/json.h>
 
 
 //thread routine function manages the irrigation process in automatic mode
@@ -63,14 +64,6 @@ int main(int argc, char *argv[]){
     //irrigation executor thread
     pthread_t irrigationControl;
 
-    /*req_params_t request_params;
-    request_params.days = 0;
-    request_params.api_key, request_params.coords = NULL;
-    if((getRequestData(&request_params)) != EXIT_SUCCESS){
-        config.running = false;
-        return EXIT_FAILURE;
-    }*/
-
     //create threads
     if(pthread_create(&cmdMonitor, NULL, cmdManager, NULL) != 0){
         fprintf(stderr, "FATAL ERR! Failed to create command line monitor thread.\n");
@@ -126,11 +119,9 @@ void* irrigationController(){
         pthread_mutex_lock(&config_mutex); 
         config.running = false;
         pthread_mutex_unlock(&config_mutex);
-        return (void*)ret;
     }
-
-    printf("%s\n", request_params.api_key);
-    printf("%s\n", request_params.coords);
+    //printf("%s\n", request_params.api_key);
+    //printf("%s\n", request_params.coords);
     pthread_mutex_lock(&config_mutex);
     while (config.running)
     {    
@@ -141,13 +132,16 @@ void* irrigationController(){
             break;
         }
         if(curtime == MIDNIGHT) config.amount_dispensed = 0;
-        //Implement weather checks
+        //TO DO: Implement weather checks
         if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing && config.time_last_ran != curtime){
             config.time_last_ran = curtime;
             float duration = getDispenseTime(config.amount);
             pthread_mutex_unlock(&config_mutex);
-            //getWeather
-            //if(evaluateWeather)
+
+            //check weather
+            *ret = evaluateWeatherData(&request_params, curtime, false);
+            if(*ret < 0) break;
+            if(*ret)
             runIrrigation(duration);
         }
         else if(config.mode == MANUAL && config.amount_immidiate > 0){
@@ -155,6 +149,10 @@ void* irrigationController(){
             //invalidate the run until time
             config.amount_immidiate = 0; 
             pthread_mutex_unlock(&config_mutex);
+
+            *ret = evaluateWeatherData(&request_params, curtime, true);
+            if(*ret < 0) break;
+
             runIrrigation(duration);
         }
         else{

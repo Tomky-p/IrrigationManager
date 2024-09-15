@@ -64,9 +64,19 @@
 #endif
 
 #ifndef VOLUME
-//Total volume of water body when full
+//Total volume of source water body when full
 #define VOLUME 250
 #endif
+
+//amount of water in liters that should be supplied to square meter of garden every day
+#define LITER_PER_SQR_M_PER_DAY 2.7
+
+#ifndef IRRIGATED_AREA
+#define IRRIGATED_AREA 565
+#endif
+
+//recommended amount of water to be dispensed per day based on the irrigated area (only 10% of it assuming most of it is empty space between plants)
+#define RECOMMENDED_AMOUNT ((float)IRRIGATED_AREA * 0.1) * LITER_PER_SQR_M_PER_DAY
 
 #define REVERSE_INTERVAL DAY_IN_MINUTES - MIN_INTERVAL
 
@@ -145,3 +155,5 @@ void verifyState(bool *args_ok, bool desiredOn);
 bool checkIntervals(int time, int time_count, uint16_t *time_vals);
 
 int getMinutesBetweenTimes(int time_1, int time_2);
+
+int getNextTime(uint16_t time_val);

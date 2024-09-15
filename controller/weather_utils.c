@@ -48,13 +48,14 @@ int sendAPIRequest(char *url, struct json_object **weather_data){
     //perform request
     res = curl_easy_perform(curl);
     if(res != CURLE_OK){
-        fprintf(stderr, "API returned ERR: %s\n", curl_easy_strerror(res));
+        fprintf(stderr, "CURL API request returned ERR: %s\n", curl_easy_strerror(res));
         curl_easy_cleanup(curl);
         free(raw_data.data);
-        return res;
+        return CURL_REQUEST_ERR;
     }
     //parse and store data into json object
     *weather_data = json_tokener_parse(raw_data.data);
+    //print_json_object(*weather_data);
     curl_easy_cleanup(curl);
     free(raw_data.data);
     return EXIT_SUCCESS;
@@ -83,8 +84,125 @@ int getWeatherForecast(struct json_object **weather_data, uint8_t days, req_para
     return sendAPIRequest(url, weather_data);
 }
 
-int evaluateWeatherData(struct json_object **weather_data, req_params_t *params){
-    return true;
+int evaluateWeatherData(req_params_t *params, int curtime, bool warn){
+    //get relevant time values
+    int next_hour = getNextTime(curtime);
+    next_hour = (next_hour % 100 > 30) ? ((next_hour/100) + 1) % 24 : (next_hour/100);
+    curtime = (curtime % 100 > 30) ? ((curtime/100) + 1) % 24 : (curtime/100);
+    if(next_hour < curtime) next_hour = 24 + next_hour;
+    //get weather
+    struct json_object *weather_data;
+    int ret = getWeatherForecast(&weather_data, DAYS_TO_FORECAST, params);
+    if(ret != EXIT_SUCCESS){
+        json_object_put(weather_data);
+        return ret;
+    }
+    //check for API err
+    struct json_object *error;
+    if(json_object_object_get_ex(weather_data, "error", &error)){
+        struct json_object *code;
+        json_object_object_get_ex(error, "code", &code);
+        int err_code = json_object_get_int(code);
+        fprintf(stderr, API_ERR_RESP_MSG, err_code, getErrMessage(err_code));
+
+        json_object_put(weather_data);
+        json_object_put(code);
+        json_object_put(error);
+        return err_code;
+    }
+    //disect data
+    struct json_object *forecast = NULL;
+    struct json_object *forecast_days = NULL;
+    struct json_object *forecast_day = NULL;
+    struct json_object *day_summary = NULL;
+    struct json_object *totalprecip = NULL;
+    struct json_object *hours = NULL;
+    struct json_object *hour = NULL;
+    struct json_object *time_date = NULL;
+    struct json_object *chance = NULL;
+    
+    //get total today precip
+    if(json_object_object_get_ex(weather_data, "forecast", &forecast) != true) {
+        json_object_put(weather_data);
+        return JSON_READ_ERR;
+    }
+    if(json_object_object_get_ex(forecast, "forecastday", &forecast_days) != true) {
+        json_object_put(weather_data);
+        return JSON_READ_ERR;
+    }
+    forecast_day = json_object_array_get_idx(forecast_days, 0);
+    if(json_object_object_get_ex(forecast_day, "day", &day_summary) != true){
+        json_object_put(weather_data);
+        return JSON_READ_ERR;
+    }
+    if(json_object_object_get_ex(day_summary, "totalprecip_mm", &totalprecip) != true){
+        json_object_put(weather_data);
+        return JSON_READ_ERR;
+    }
+    double totalprecip_mm = json_object_get_double(totalprecip);
+    if(totalprecip_mm > MAX_PRECIP_TODAY_MM){
+        printf("Postponed irrigation due to current rainfall.\n");
+        json_object_put(weather_data);
+        return NO;
+    }
+    printf("total precip: %f\n", totalprecip_mm);
+    printf("Next cycle: %d\n", next_hour);
+    printf("Current hour: %d\n", curtime);
+
+    //foreach hour up to the next cycle and check if it will rain
+    if(json_object_object_get_ex(forecast_day, "hour", &hours) != true){
+        json_object_put(weather_data);
+        return JSON_READ_ERR;
+    }
+    int lenght = json_object_array_length(hours);
+    int interval = 0;
+    bool will_rain = false;
+    totalprecip_mm = 0;
+    int rain_hours = 0;
+    for (size_t i = curtime; i <= (size_t)next_hour; i++)
+    {
+        hour = json_object_array_get_idx(hours, (i % lenght));
+        if(json_object_object_get_ex(hour, "time", &time_date) != true){
+            json_object_put(weather_data);
+            return JSON_READ_ERR;
+        }
+        if(json_object_object_get_ex(hour, "precip_mm", &totalprecip) != true){
+            json_object_put(weather_data);
+            return JSON_READ_ERR;
+        }
+        if(json_object_object_get_ex(hour, "chance_of_rain", &chance) != true){
+            json_object_put(weather_data);
+            return JSON_READ_ERR;
+        }
+        printf("Date and time: %s\n       Precip in mm: %f, Chance of rain: %d\n", json_object_get_string(time_date), json_object_get_double(totalprecip), json_object_get_int(chance));
+        if(json_object_get_int(chance) >= RAIN_CHANCE_THRESHOLD){
+            rain_hours++;
+            will_rain = true;
+        }
+        totalprecip_mm += json_object_get_double(totalprecip);
+        interval = i - curtime;
+    }
+    double needed_precip = (NEEDED_PRECIP_PER_DAY * interval) / 24;
+    printf("Needed precip: %f Total precip: %f Interval: %d\n", needed_precip, totalprecip_mm, interval);
+    
+    if(totalprecip_mm >= needed_precip || (interval < ((float)MIN_INTERVAL/60.0)*2 && will_rain)){
+        printf("Postponed irrigation due to suspected rainfall.\n");
+        json_object_put(weather_data);
+        return NO;
+    }
+    //TO DO Implement some check of the irrigation level to the returning of the adjusted amount
+    
+    //get the total for the next days
+    for (size_t i = 1; i < DAYS_TO_FORECAST; i++)
+    {
+        forecast_day = json_object_array_get_idx(forecast_days, i);
+    }
+    
+    //print_json_object(weather_data);
+    printf("Weather is dry beginning dispensing...\n");
+    //destroy json objects
+    json_object_put(weather_data);
+    return YES;
 }
 
 int getRequestData(req_params_t *req_params){
@@ -114,8 +232,8 @@ int readDataFromFile(char *filename, char **buffer){
         fprintf(stderr, FILE_NOT_FOUND_ERR_MSG ,filename);
         return FILE_NOT_FOUND_ERR;
     }
-    int buf_capacity = API_KEY_LENGHT + 1;
-    *buffer = (char*)malloc(buf_capacity * sizeof(char));
+    int buf_capacity = API_KEY_LENGHT;
+    *buffer = (char*)malloc((buf_capacity + 1) * sizeof(char));
     if(buffer == NULL){
         fprintf(stderr, ALLOC_ERR_MSG);
         return ALLOCATION_ERR;
@@ -140,6 +258,56 @@ int readDataFromFile(char *filename, char **buffer){
     (*buffer)[i] = '\0';
     fclose(data_file);
     return EXIT_SUCCESS;
+}
+
+void print_json_object(struct json_object *json) {
+    const char *json_str = json_object_to_json_string_ext(json, JSON_C_TO_STRING_PRETTY);
+    printf("%s\n", json_str);
+}
+
+int checkIrrigationLevel(int precip){
+    pthread_mutex_lock(&config_mutex);
+    float till_suffient_amount = RECOMMENDED_AMOUNT - config.amount_dispensed - ((precip * RECOMMENDED_AMOUNT)/NEEDED_PRECIP_PER_DAY);
+    pthread_mutex_unlock(&config_mutex);
+    if(till_suffient_amount <= 0){
+        return YES;
+    }
+    pthread_mutex_lock(&config_mutex);
+    till_suffient_amount -= config.amount;
+    pthread_mutex_unlock(&config_mutex);
+    if(till_suffient_amount <= 0){
+        return CHANGE_AMOUNT;
+    }
+    return NO;
+}
+
+const char *getErrMessage(int err_code){
+    switch (err_code)
+    {
+    case NO_API_KEY_ERR:
+        return "API key not provided.";
+    case NO_QUERY_ERR:
+        return "Parameter 'q' not provided.";
+    case URL_INVALID:
+        return "API request url is invalid";
+    case LOCATION_NOT_FOUND:
+        return "No location found matching parameter 'q'";
+    case INVALID_API_KEY:
+        return "API key provided is invalid";
+    case EXCEEDED_QUOTA:
+        return "API key has exceeded calls per month quota.";
+    case API_KEY_DISABLED:
+        return "API key has been disabled.";
+    case SERVICE_NOT_AVAILABLE:
+        return "API key does not have access to the resource. Please check pricing page for what is allowed in your API subscription plan.";
+    case ENCODING_INVALID:
+        return "Json body passed in bulk request is invalid. Please make sure it is valid json with utf-8 encoding.";
+    case INTERNAL_ERR:
+        return "Internal application error.";
+    default:
+        return "Unknown API ERR.";
+    }
+
 }
 
 

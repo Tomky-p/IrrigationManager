@@ -519,3 +519,25 @@ int getMinutesBetweenTimes(int time_1, int time_2){
     int hours_2 = (time_2 / 100)*(-1);
     return abs(((hours_1 + hours_2)*60) +  minutes_1 + minutes_2);   
 }
+
+int getNextTime(uint16_t time_val){
+    pthread_mutex_lock(&config_mutex);
+    printf("Times: ");
+    int time = MAX_TIME + 1;
+    for (size_t i = 0; i < config.times_per_day; i++)
+    {
+        printf("%d ", config.time_routine[i]);
+        if(config.time_routine[i] > time_val && config.time_routine[i] < time){
+            time = config.time_routine[i];
+        }
+    }
+    if(time == MAX_TIME + 1){
+        for (size_t i = 0; i < config.times_per_day; i++)
+        {
+            if(config.time_routine[i] < time) time = config.time_routine[i];
+        }    
+    }
+    printf("\n");
+    pthread_mutex_unlock(&config_mutex);
+    return time;
+}
