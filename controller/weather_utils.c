@@ -39,8 +39,7 @@ int sendAPIRequest(char *url, struct json_object **weather_data){
         free(raw_data.data);
         return HTTP_INIT_ERR;
     }
-    //format URL
-    printf("API call URL: %s\n", url);
+    //printf("API call URL: %s\n", url);
     //set options
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeToBuffer);
@@ -84,9 +83,9 @@ int getWeatherForecast(struct json_object **weather_data, uint8_t days, req_para
     return sendAPIRequest(url, weather_data);
 }
 
-int evaluateWeatherData(req_params_t *params, int curtime, bool warn){
+int evaluateWeatherData(req_params_t *params, int curtime, int manual_duration){
     //get relevant time values
-    int next_hour = getNextTime(curtime);
+    int next_hour = (manual_duration == 0) ? getNextTime(curtime) : curtime + (manual_duration/60) + (MIN_INTERVAL+1)/60;
     next_hour = (next_hour % 100 > 30) ? ((next_hour/100) + 1) % 24 : (next_hour/100);
     curtime = (curtime % 100 > 30) ? ((curtime/100) + 1) % 24 : (curtime/100);
     if(next_hour < curtime) next_hour = 24 + next_hour;
@@ -106,7 +105,7 @@ int evaluateWeatherData(req_params_t *params, int curtime, bool warn){
         json_object_put(weather_data);
         return err_code;
     }
-    //disect data
+    //containers
     struct json_object *forecast = NULL;
     struct json_object *forecast_days = NULL;
     struct json_object *forecast_day = NULL;
@@ -155,19 +154,20 @@ int evaluateWeatherData(req_params_t *params, int curtime, bool warn){
                 json_object_put(weather_data);
                 return JSON_READ_ERR;
             }
-            printf("Date and time: %s\n       Precip in mm: %.2f, Chance of rain: %d\n", json_object_get_string(time_date), json_object_get_double(totalprecip), json_object_get_int(chance));
+            //printf("Date and time: %s\n       Precip in mm: %.2f, Chance of rain: %d\n", json_object_get_string(time_date), json_object_get_double(totalprecip), json_object_get_int(chance));
             if(json_object_get_int(chance) >= RAIN_CHANCE_THRESHOLD){
                 rain_hours++;
             }
             totalprecip_mm += json_object_get_double(totalprecip);
         }        
     }
-    printf("Total precip: %f Interval: %d\n", totalprecip_mm, interval_hours);
+    //printf("Total precip: %f Interval: %d\n", totalprecip_mm, interval_hours);
 
     //check if it will rain 60% of the time between irrigation cycles and weather the amount of rainfall and
         // the previously dispensed water has surpassed the recommended amount
     if(checkIrrigationLevel(totalprecip_mm) || (float)rain_hours > ((float)interval_hours*0.6)){
-        printf("Postponed irrigation due to suspected rainfall.\n");
+        char *message = (manual_duration > 0) ? "Suspected rainfall in the upcoming hours. Running the system could overwater the soil!\n" : "Postponed irrigation due to suspected rainfall.\n"; 
+        printf("%s", message);
         json_object_put(weather_data);
         return NO;
     }

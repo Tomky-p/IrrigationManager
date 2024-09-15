@@ -94,7 +94,7 @@ int getWeatherForecast(struct json_object **weather_data, uint8_t days, req_para
 
 //process a json that is the result of the weather API call
 //returns negative values when a fatal err happens, returns 0 and 1 for NO and YES (if irrigation should occur), returns >1000 for api values err
-int evaluateWeatherData(req_params_t *req_data, int curtime, bool warn);
+int evaluateWeatherData(req_params_t *req_data, int curtime, int manual_duration);
 
 //loads API key and coordinates from file
 int getRequestData(req_params_t *req_params);

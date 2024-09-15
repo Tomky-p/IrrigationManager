@@ -120,8 +120,8 @@ void* irrigationController(){
         config.running = false;
         pthread_mutex_unlock(&config_mutex);
     }
-    //printf("%s\n", request_params.api_key);
-    //printf("%s\n", request_params.coords);
+
+    int executed = TIME_ERR;
     pthread_mutex_lock(&config_mutex);
     while (config.running)
     {    
@@ -132,34 +132,37 @@ void* irrigationController(){
             break;
         }
         if(curtime == MIDNIGHT) config.amount_dispensed = 0;
-        //TO DO: Implement weather checks
-        if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing && config.time_last_ran != curtime){
-            config.time_last_ran = curtime;
+
+        if(config.mode == AUTO && isDispensingTime(curtime) && !config.dispensing && executed != curtime){
+            executed = curtime;
             float duration = getDispenseTime(config.amount);
             pthread_mutex_unlock(&config_mutex);
 
             //check weather
-            *ret = evaluateWeatherData(&request_params, curtime, false);
+            *ret = evaluateWeatherData(&request_params, curtime, 0);
             if(*ret < 0) break;
-            if(*ret)
-            runIrrigation(duration);
+            if(*ret == YES){
+                pthread_mutex_lock(&config_mutex);
+                config.time_last_ran = curtime;
+                pthread_mutex_unlock(&config_mutex);
+                runIrrigation(duration);  
+            } 
         }
         else if(config.mode == MANUAL && config.amount_immidiate > 0){
             float duration = getDispenseTime(config.amount_immidiate);
-            //invalidate the run until time
-            config.amount_immidiate = 0; 
+            config.time_last_ran = curtime;
+            config.amount_immidiate = 0; //invalidate the run until time
             pthread_mutex_unlock(&config_mutex);
 
-            *ret = evaluateWeatherData(&request_params, curtime, true);
+            //run the irrigation regardless of the weather but recieve a warning
+            *ret = evaluateWeatherData(&request_params, curtime, (int)duration);
             if(*ret < 0) break;
-
             runIrrigation(duration);
         }
         else{
             pthread_mutex_unlock(&config_mutex);
         }
-        //wait 100ms NOTE: cannot be over a minute
-        delay(100);
+        delay(100); //wait 100ms NOTE: cannot be over a minute
         pthread_mutex_lock(&config_mutex);
     }
     pthread_mutex_unlock(&config_mutex);
