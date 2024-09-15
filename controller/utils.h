@@ -72,11 +72,12 @@
 #define LITER_PER_SQR_M_PER_DAY 2.7
 
 #ifndef IRRIGATED_AREA
-#define IRRIGATED_AREA 565
+//the total square are of the garden in square meters
+#define IRRIGATED_AREA 56
 #endif
 
-//recommended amount of water to be dispensed per day based on the irrigated area (only 10% of it assuming most of it is empty space between plants)
-#define RECOMMENDED_AMOUNT ((float)IRRIGATED_AREA * 0.1) * LITER_PER_SQR_M_PER_DAY
+//recommended amount of water to be dispensed per day based on the irrigated area
+#define RECOMMENDED_AMOUNT (float)IRRIGATED_AREA * LITER_PER_SQR_M_PER_DAY
 
 #define REVERSE_INTERVAL DAY_IN_MINUTES - MIN_INTERVAL
 

@@ -3,6 +3,7 @@
 #include <json-c/json.h>
 #include <stdbool.h>
 
+//HTTP request constants and parameters
 #ifndef API_KEY_FILENAME
 //file where the api key is stored 
 #define API_KEY_FILENAME "api_key.txt"
@@ -28,8 +29,9 @@
 #define URL_NO_OF_DAYS "&days="
 #define URL_NO_ALERTS "&alerts=no"
 
+//rainfall constants
 #ifndef DAYS_TO_FORECAST
-#define DAYS_TO_FORECAST 1
+#define DAYS_TO_FORECAST 2
 #endif
 
 #ifndef MAX_PRECIP_TODAY_MM
@@ -48,14 +50,14 @@
 #define RAIN_CHANCE_THRESHOLD 75
 #endif
 
-#define CHANGE_AMOUNT 2
-
+//Fatal JSON and HTTP request err codes
 #define FILE_NOT_FOUND_ERR -1
 #define HTTP_INIT_ERR -2
 #define CURL_WRITEFUNC_ERROR 0
 #define JSON_READ_ERR -4
 #define CURL_REQUEST_ERR -5
 
+//API err codes
 #define NO_API_KEY_ERR 1002	//API key not provided.
 #define NO_QUERY_ERR 1003	//Parameter 'q' not provided.
 #define URL_INVALID 1005	//API request url is invalid
@@ -67,15 +69,18 @@
 #define ENCODING_INVALID 9000	//Json body passed in bulk request is invalid. Please make sure it is valid json with utf-8 encoding.
 #define INTERNAL_ERR 9999	//Internal application error.
 
+//HTTP request err messages
 #define HTTP_INIT_ERR_MSG "CRITICAL ERR! Failed to initialize HTTP requests.\n"
 #define URL_COPY_ERR "ERR! Failed to parse URL.\n"
 #define API_ERR_RESP_MSG "API returned code: %d, with message: %s\n"
 
+//Used to hold the sensitive API request data
 typedef struct{
     char *api_key;
     char *coords;
 }req_params_t;
 
+//Used to hold the raw response data
 typedef struct {
     char *data;
     size_t size;
@@ -88,6 +93,7 @@ int getCurrentWeather(struct json_object **weather_data, req_params_t *req_data)
 int getWeatherForecast(struct json_object **weather_data, uint8_t days, req_params_t *req_data);
 
 //process a json that is the result of the weather API call
+//returns negative values when a fatal err happens, returns 0 and 1 for NO and YES (if irrigation should occur), returns >1000 for api values err
 int evaluateWeatherData(req_params_t *req_data, int curtime, bool warn);
 
 //loads API key and coordinates from file
@@ -99,6 +105,11 @@ int readDataFromFile(char *filename, char **buffer);
 //makes API request based on the provided URL
 int sendAPIRequest(char *url, struct json_object **weather_data);
 
+//prints the contents of a JSON object
 void print_json_object(struct json_object *json);
 
+//returns the proper err message for each API err
 const char *getErrMessage(int err_code);
+
+//estimates soil irrigation level based on the amount already dispensed and upcoming rainfall
+int checkIrrigationLevel(double precip);

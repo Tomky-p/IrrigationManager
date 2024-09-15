@@ -90,13 +90,12 @@ int evaluateWeatherData(req_params_t *params, int curtime, bool warn){
     next_hour = (next_hour % 100 > 30) ? ((next_hour/100) + 1) % 24 : (next_hour/100);
     curtime = (curtime % 100 > 30) ? ((curtime/100) + 1) % 24 : (curtime/100);
     if(next_hour < curtime) next_hour = 24 + next_hour;
+
     //get weather
     struct json_object *weather_data;
     int ret = getWeatherForecast(&weather_data, DAYS_TO_FORECAST, params);
-    if(ret != EXIT_SUCCESS){
-        json_object_put(weather_data);
-        return ret;
-    }
+    if(ret != EXIT_SUCCESS) return ret;
+
     //check for API err
     struct json_object *error;
     if(json_object_object_get_ex(weather_data, "error", &error)){
@@ -104,24 +103,20 @@ int evaluateWeatherData(req_params_t *params, int curtime, bool warn){
         json_object_object_get_ex(error, "code", &code);
         int err_code = json_object_get_int(code);
         fprintf(stderr, API_ERR_RESP_MSG, err_code, getErrMessage(err_code));
-
         json_object_put(weather_data);
-        json_object_put(code);
-        json_object_put(error);
         return err_code;
     }
     //disect data
     struct json_object *forecast = NULL;
     struct json_object *forecast_days = NULL;
     struct json_object *forecast_day = NULL;
-    struct json_object *day_summary = NULL;
     struct json_object *totalprecip = NULL;
     struct json_object *hours = NULL;
     struct json_object *hour = NULL;
     struct json_object *time_date = NULL;
     struct json_object *chance = NULL;
     
-    //get total today precip
+    //unpack forecast data
     if(json_object_object_get_ex(weather_data, "forecast", &forecast) != true) {
         json_object_put(weather_data);
         return JSON_READ_ERR;
@@ -130,76 +125,56 @@ int evaluateWeatherData(req_params_t *params, int curtime, bool warn){
         json_object_put(weather_data);
         return JSON_READ_ERR;
     }
-    forecast_day = json_object_array_get_idx(forecast_days, 0);
-    if(json_object_object_get_ex(forecast_day, "day", &day_summary) != true){
-        json_object_put(weather_data);
-        return JSON_READ_ERR;
-    }
-    if(json_object_object_get_ex(day_summary, "totalprecip_mm", &totalprecip) != true){
-        json_object_put(weather_data);
-        return JSON_READ_ERR;
-    }
-    double totalprecip_mm = json_object_get_double(totalprecip);
-    if(totalprecip_mm > MAX_PRECIP_TODAY_MM){
-        printf("Postponed irrigation due to current rainfall.\n");
-        json_object_put(weather_data);
-        return NO;
-    }
-    printf("total precip: %f\n", totalprecip_mm);
-    printf("Next cycle: %d\n", next_hour);
-    printf("Current hour: %d\n", curtime);
-
-    //foreach hour up to the next cycle and check if it will rain
-    if(json_object_object_get_ex(forecast_day, "hour", &hours) != true){
-        json_object_put(weather_data);
-        return JSON_READ_ERR;
-    }
-    int lenght = json_object_array_length(hours);
-    int interval = 0;
-    bool will_rain = false;
-    totalprecip_mm = 0;
+    //get precipation and hours of rain in between cycles
+    double totalprecip_mm = 0;
     int rain_hours = 0;
-    for (size_t i = curtime; i <= (size_t)next_hour; i++)
+    int interval_hours = 0;
+    for (size_t i = 0; i < json_object_array_length(forecast_days); i++)
     {
-        hour = json_object_array_get_idx(hours, (i % lenght));
-        if(json_object_object_get_ex(hour, "time", &time_date) != true){
+        forecast_day = json_object_array_get_idx(forecast_days, i);
+        if(forecast_day == NULL || json_object_object_get_ex(forecast_day, "hour", &hours) != true){
             json_object_put(weather_data);
             return JSON_READ_ERR;
         }
-        if(json_object_object_get_ex(hour, "precip_mm", &totalprecip) != true){
-            json_object_put(weather_data);
-            return JSON_READ_ERR;
-        }
-        if(json_object_object_get_ex(hour, "chance_of_rain", &chance) != true){
-            json_object_put(weather_data);
-            return JSON_READ_ERR;
-        }
-        printf("Date and time: %s\n       Precip in mm: %f, Chance of rain: %d\n", json_object_get_string(time_date), json_object_get_double(totalprecip), json_object_get_int(chance));
-        if(json_object_get_int(chance) >= RAIN_CHANCE_THRESHOLD){
-            rain_hours++;
-            will_rain = true;
-        }
-        totalprecip_mm += json_object_get_double(totalprecip);
-        interval = i - curtime;
+        int begin_at = (i == 0)? curtime : 0;  
+        for (size_t p = begin_at; p < json_object_array_length(hours); p++)
+        {
+            if(interval_hours > next_hour - curtime) break;
+            hour = json_object_array_get_idx(hours, p);
+            interval_hours++;
+
+            if(hour == NULL || json_object_object_get_ex(hour, "time", &time_date) != true){
+                json_object_put(weather_data);
+                return JSON_READ_ERR;
+            }
+            if(json_object_object_get_ex(hour, "precip_mm", &totalprecip) != true){
+                json_object_put(weather_data);
+                return JSON_READ_ERR;
+            }
+            if(json_object_object_get_ex(hour, "chance_of_rain", &chance) != true){
+                json_object_put(weather_data);
+                return JSON_READ_ERR;
+            }
+            printf("Date and time: %s\n       Precip in mm: %.2f, Chance of rain: %d\n", json_object_get_string(time_date), json_object_get_double(totalprecip), json_object_get_int(chance));
+            if(json_object_get_int(chance) >= RAIN_CHANCE_THRESHOLD){
+                rain_hours++;
+            }
+            totalprecip_mm += json_object_get_double(totalprecip);
+        }        
     }
-    double needed_precip = (NEEDED_PRECIP_PER_DAY * interval) / 24;
-    printf("Needed precip: %f Total precip: %f Interval: %d\n", needed_precip, totalprecip_mm, interval);
-    
-    if(totalprecip_mm >= needed_precip || (interval < ((float)MIN_INTERVAL/60.0)*2 && will_rain)){
+    printf("Total precip: %f Interval: %d\n", totalprecip_mm, interval_hours);
+
+    //check if it will rain 60% of the time between irrigation cycles and weather the amount of rainfall and
+        // the previously dispensed water has surpassed the recommended amount
+    if(checkIrrigationLevel(totalprecip_mm) || (float)rain_hours > ((float)interval_hours*0.6)){
         printf("Postponed irrigation due to suspected rainfall.\n");
         json_object_put(weather_data);
         return NO;
     }
-    //TO DO Implement some check of the irrigation level to the returning of the adjusted amount
-    
-    //get the total for the next days
-    for (size_t i = 1; i < DAYS_TO_FORECAST; i++)
-    {
-        forecast_day = json_object_array_get_idx(forecast_days, i);
-    }
+    printf("Weather is dry beginning dispensing...\n");
     
     //print_json_object(weather_data);
-    printf("Weather is dry beginning dispensing...\n");
+    
     //destroy json objects
     json_object_put(weather_data);
     return YES;
@@ -265,18 +240,13 @@ void print_json_object(struct json_object *json) {
     printf("%s\n", json_str);
 }
 
-int checkIrrigationLevel(int precip){
+int checkIrrigationLevel(double precip){
     pthread_mutex_lock(&config_mutex);
-    float till_suffient_amount = RECOMMENDED_AMOUNT - config.amount_dispensed - ((precip * RECOMMENDED_AMOUNT)/NEEDED_PRECIP_PER_DAY);
+    //NOTE: It is assumed that the recommended amount per day is equal to the needed precipation per day (1 mm of precipation = 1 liter of water per square meter)
+    float till_suffient_amount = RECOMMENDED_AMOUNT - config.amount_dispensed - ((precip * RECOMMENDED_AMOUNT) / NEEDED_PRECIP_PER_DAY); //this is the conversion serves as conversion from mm of precip to liters
     pthread_mutex_unlock(&config_mutex);
     if(till_suffient_amount <= 0){
         return YES;
-    }
-    pthread_mutex_lock(&config_mutex);
-    till_suffient_amount -= config.amount;
-    pthread_mutex_unlock(&config_mutex);
-    if(till_suffient_amount <= 0){
-        return CHANGE_AMOUNT;
     }
     return NO;
 }
