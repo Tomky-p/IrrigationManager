@@ -20,14 +20,15 @@
 #define BASE_URL_FORECAST "http://api.weatherapi.com/v1/forecast.json?key="
 #endif
 
-#ifndef BASE_URL_PRESENT 
-#define BASE_URL_PRESENT "http://api.weatherapi.com/v1/current.json?key="
+#ifndef BASE_URL_PAST 
+#define BASE_URL_PAST "http://api.weatherapi.com/v1/history.json?key="
 #endif
 
 #define URL_QUERY "&q="
 #define URL_NO_AQ "&aqi=no"
 #define URL_NO_OF_DAYS "&days="
 #define URL_NO_ALERTS "&alerts=no"
+#define URL_DATE "&dt="
 
 //rainfall constants
 #ifndef DAYS_TO_FORECAST
@@ -87,7 +88,7 @@ typedef struct {
 }Response_data;
 
 //makes an API request to get weather data for today
-int getCurrentWeather(struct json_object **weather_data, req_params_t *req_data);
+int getPreviousWeather(struct json_object **weather_data, req_params_t *params);
 
 //makes an API request to get forecast for a specified number of days
 int getWeatherForecast(struct json_object **weather_data, uint8_t days, req_params_t *req_data);
@@ -113,3 +114,11 @@ const char *getErrMessage(int err_code);
 
 //estimates soil irrigation level based on the amount already dispensed and upcoming rainfall
 int checkIrrigationLevel(double precip);
+
+int getPrevDate(char date[]);
+
+int checkAPIErrs(struct json_object **weather_data);
+
+int unpackJson(struct json_object **weather_data, struct json_object **forecast, struct json_object **forecast_days);
+
+int getRainfallData(struct json_object **weather_data, struct json_object **hour, struct json_object **time_date, struct json_object **chance, struct json_object **totalprecip);

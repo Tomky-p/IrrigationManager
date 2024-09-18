@@ -46,7 +46,7 @@
 #define INVALID_ARGS_MSG "Provided parameters are invalid! PROVIDE: [times per day] [amount](in liters)\n"
 
 //INFO messages
-#define HELP_MESSAGE "LIST OF ALL COMMANDS\n- mode [mode]\n  changes mode of the system\n    parameters:\n    (mode) -a automatic operation -m manual\n   - without parameters: show the current mode\n- run [amount] -(confirm)\n    run in watering cycle in manual mode\n    parameters:\n    (int) amount in liters to be dispensed\n- config [times per day] [amount] -(confirm)\n    change the config for automatic mode\n    parameters:\n    (int) new number of cycles per day\n    (int) new amount to be dispensed per cycle\n    - without paramater: prints current config\n- stop -(confirm)\n    stops the water pump\n- kill -(confirm)\n    stops and quits the entire program\n- state\n    show whether the system is dispensing or not\n"
+#define HELP_MESSAGE "LIST OF ALL COMMANDS\n- mode [mode]\n  changes mode of the system\n    parameters:\n    (mode) -a automatic operation -m manual\n   - without parameters: show the current mode\n- run [amount] -(confirm)\n    run in watering cycle in manual mode\n    parameters:\n    (int) amount in liters to be dispensed\n- config [times per day] [amount] -(confirm)\n    change the configuration for automatic mode\n    parameters:\n    (int) new number of cycles per day\n    (int) new amount to be dispensed per cycle\n    - without paramater: shows current configuration\n- stop -(confirm)\n    stops the water pump\n- kill -(confirm)\n    stops and quits the entire program\n- state\n    shows whether the system is dispensing or not\n"
 
 //mode values
 #define AUTO 1
@@ -157,4 +157,4 @@ bool checkIntervals(int time, int time_count, uint16_t *time_vals);
 
 int getMinutesBetweenTimes(int time_1, int time_2);
 
-int getNextTime(uint16_t time_val);
+int getNextTime(uint16_t time_val, int prevOrNext);

@@ -33,9 +33,11 @@ int main(){
     //int next_hour = getNextTime(curtime);
     //printf("Next cycle: %d\n", next_hour);
     //printf("Current hour: %d\n", curtime);
-    int ret = evaluateWeatherData(&request_params, curtime, true);
+    //struct json_object *weather_data = NULL;
+    //int ret = getWeatherForecast(&weather_data, DAYS_TO_FORECAST, &request_params);
+    int ret = evaluateWeatherData(&request_params, curtime, 0);
     printf("Request response code: %d\n", ret);
-
+    //json_object_put(weather_data);
     free(request_params.api_key);
     free(request_params.coords);
     free(config.time_routine);
