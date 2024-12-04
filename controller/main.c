@@ -174,7 +174,7 @@ void* irrigationController(){
 
 void* cmdManager(){
     int *ret = malloc(sizeof(int));
-    char *command = (char*)malloc(STARTING_CAPACITY);
+    char *command = (char*)malloc(STARTING_CAPACITY * sizeof(char));
     if (command == NULL){
         *ret = ALLOCATION_ERR;
         config.running = false;

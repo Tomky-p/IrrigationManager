@@ -39,7 +39,6 @@ int sendAPIRequest(char *url, struct json_object **weather_data){
         free(raw_data.data);
         return HTTP_INIT_ERR;
     }
-    //printf("API call URL: %s\n", url);
     //set options
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeToBuffer);
@@ -54,7 +53,6 @@ int sendAPIRequest(char *url, struct json_object **weather_data){
     }
     //parse and store data into json object
     *weather_data = json_tokener_parse(raw_data.data);
-    //print_json_object(*weather_data);
     curl_easy_cleanup(curl);
     free(raw_data.data);
     return EXIT_SUCCESS;
@@ -141,7 +139,6 @@ int evaluateWeatherData(req_params_t *params, int curtime, int manual_duration){
             ret = getRainfallData(&weather_data, &hour, &time_date, &chance, &totalprecip);
             if(ret != EXIT_SUCCESS) return ret;
 
-            //printf("Date and time: %s\n       Precip in mm: %.2f, Chance of rain: %d\n", json_object_get_string(time_date), json_object_get_double(totalprecip), json_object_get_int(chance));
             if(json_object_get_int(chance) >= RAIN_CHANCE_THRESHOLD){
                 upcom_rain_hours++;
             }
@@ -167,6 +164,7 @@ int evaluateWeatherData(req_params_t *params, int curtime, int manual_duration){
         }
         prev_precip_mm += json_object_get_double(totalprecip);       
     }
+    //clear previous data 
     json_object_put(weather_data);
     //load the data for the previous day
     ret = getPreviousWeather(&weather_data, params);
@@ -196,8 +194,6 @@ int evaluateWeatherData(req_params_t *params, int curtime, int manual_duration){
         }
         prev_precip_mm += json_object_get_double(totalprecip);
     }
-    //printf("Total upcomming precip: %f Interval: %d\n", upcom_precip_mm, upcom_interval_hours);
-    //printf("Total previous precip: %f Interval: %d\n", prev_precip_mm, prev_interval_hours);
 
     //check if it will rain 60% of the time between irrigation cycles and weather the amount of rainfall and
         // the previously dispensed water has surpassed the recommended amount

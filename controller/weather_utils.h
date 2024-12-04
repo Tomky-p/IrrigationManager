@@ -115,10 +115,14 @@ const char *getErrMessage(int err_code);
 //estimates soil irrigation level based on the amount already dispensed and upcoming rainfall
 int checkIrrigationLevel(double precip);
 
+//get the date of the previous date
 int getPrevDate(char date[]);
 
+//prints and returns API errs
 int checkAPIErrs(struct json_object **weather_data);
 
+//unpacks the json object retrieves relevant data
 int unpackJson(struct json_object **weather_data, struct json_object **forecast, struct json_object **forecast_days);
 
+//further unpacks the json object the retrieves rainfall data
 int getRainfallData(struct json_object **weather_data, struct json_object **hour, struct json_object **time_date, struct json_object **chance, struct json_object **totalprecip);

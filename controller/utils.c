@@ -36,22 +36,12 @@ LIST OF ALL COMMANDS
     show whether the system is dispensing or not
 */
 int processCommand(char *input){
-    char *cmd_buffer = (char*)calloc(MAX_LENGHT * sizeof(char), sizeof(char));
-    char *param_buffer_first = (char*)calloc(MAX_LENGHT * sizeof(char), sizeof(char));
-    char *param_buffer_second = (char*)calloc(MAX_LENGHT * sizeof(char), sizeof(char));
-    //allocation check
-    if(cmd_buffer == NULL || param_buffer_first == NULL || param_buffer_second == NULL){
-        if(cmd_buffer != NULL) free(cmd_buffer);
-        if(param_buffer_first != NULL) free(param_buffer_first);
-        if(param_buffer_second !=  NULL) free(param_buffer_second);
-        return ALLOCATION_ERR;
-    }
-    if(!splitToBuffers(input, cmd_buffer, param_buffer_first, param_buffer_second)){
-        free(cmd_buffer);
-        free(param_buffer_first);
-        free(param_buffer_second);
-        return EXIT_SUCCESS;
-    }
+    char *cmd_buffer, arg1_buffer, arg2_buffer, tmp_ptr;
+
+    cmd_buffer = strtok_r(input, " \r\n", &tmp_ptr);
+    arg1_buffer = strtok_r(NULL, " \r\n", &tmp_ptr);
+    arg2_buffer = strtok_r(NULL, " \r\n", &tmp_ptr);
+
     bool args_ok = true;
     if(strncmp(cmd_buffer, "mode", 5) == 0)
     {
@@ -59,25 +49,25 @@ int processCommand(char *input){
         if(config.dispensing){
             fprintf(stderr, "Cannot switch the operating mode while the system is running.\n");
         }
-        else if (strncmp(param_buffer_second, "", MAX_LENGHT) != 0){
+        else if (strncmp(arg2_buffer, "", MAX_LENGHT) != 0){
             fprintf(stderr, "Too many parameters, USAGE: -m for manual or -a for automatic mode.\n");
         }
-        else if (strncmp(param_buffer_first, "", MAX_LENGHT) == 0){
+        else if (strncmp(arg1_buffer, "", MAX_LENGHT) == 0){
             const char *response = config.mode == AUTO ? "Currently running in automatic mode.\n" : "Currently running in manual mode.\n";
             printf("%s",response);        
         }     
-        else if (strncmp(param_buffer_first, "-a", 3) == 0 && config.mode == AUTO){
+        else if (strncmp(arg1_buffer, "-a", 3) == 0 && config.mode == AUTO){
             printf("Already running in automatic mode.\n");
         }
-        else if (strncmp(param_buffer_first, "-a", 3) == 0 && config.mode != AUTO){
+        else if (strncmp(arg1_buffer, "-a", 3) == 0 && config.mode != AUTO){
             printf("Switching to automatic mode...\n");
             config.mode = AUTO;           
         }    
-        else if (strncmp(param_buffer_first, "-m", 3) == 0 && config.mode != MANUAL){
+        else if (strncmp(arg1_buffer, "-m", 3) == 0 && config.mode != MANUAL){
             printf("Switching to manual mode...\n");
             config.mode = MANUAL;
         }
-        else if (strncmp(param_buffer_first, "-m", 3) == 0 && config.mode == MANUAL){
+        else if (strncmp(arg1_buffer, "-m", 3) == 0 && config.mode == MANUAL){
             printf("Already running in manual mode.\n");
         }
         else{
@@ -94,10 +84,10 @@ int processCommand(char *input){
         }
         pthread_mutex_unlock(&config_mutex);
         verifyState(&args_ok, false);
-        countArguments(1, &args_ok, param_buffer_first, param_buffer_second);
-        verifyArguments(&args_ok, param_buffer_first, param_buffer_second, 1);
+        countArguments(1, &args_ok, arg1_buffer, arg2_buffer);
+        verifyArguments(&args_ok, arg1_buffer, arg2_buffer, 1);
         if(args_ok){
-            int amount = atoi(param_buffer_first);
+            int amount = atoi(arg1_buffer);
             printf("The irrigation system will dispense %d liters of water.\nAre you sure you want proceed?\n[y/n]", amount);
             int ret = recieveConfirmation();
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
@@ -115,23 +105,23 @@ int processCommand(char *input){
     }
     else if (strncmp(cmd_buffer, "config", 7) == 0)
     {
-        if(strncmp(param_buffer_first, "", MAX_LENGHT) == 0 && strncmp(param_buffer_second, "" , MAX_LENGHT) == 0){
+        if(strncmp(arg1_buffer, "", MAX_LENGHT) == 0 && strncmp(arg2_buffer, "" , MAX_LENGHT) == 0){
             args_ok = false;
             printConfig();
         }
         verifyState(&args_ok, false);
-        countArguments(2, &args_ok, param_buffer_first, param_buffer_second);
-        verifyArguments(&args_ok, param_buffer_first, param_buffer_second, 2);
+        countArguments(2, &args_ok, arg1_buffer, arg2_buffer);
+        verifyArguments(&args_ok, arg1_buffer, arg2_buffer, 2);
 
         if(args_ok){
-            uint8_t new_times_per_day = atoi(param_buffer_first);
-            uint16_t new_amount = atoi(param_buffer_second);
+            uint8_t new_times_per_day = atoi(arg1_buffer);
+            uint16_t new_amount = atoi(arg2_buffer);
             printf("Set new configuration?\nCycles per day: %d\nAmount: %d l\nAre you sure you want proceed?\n[y/n]", new_times_per_day, new_amount);
             int ret = recieveConfirmation();
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
                 printf("Please enter %d times of day at which irrigation should commence.\n", new_times_per_day);
-                if(getTimeValues( new_times_per_day) == ALLOCATION_ERR) return ALLOCATION_ERR;
+                if(getTimeValues(new_times_per_day) == ALLOCATION_ERR) return ALLOCATION_ERR;
                 pthread_mutex_lock(&config_mutex);
                 config.amount = new_amount;
                 pthread_mutex_unlock(&config_mutex);
@@ -145,7 +135,7 @@ int processCommand(char *input){
     }
     else if (strncmp(cmd_buffer, "kill", 5) == 0)
     {
-        countArguments(0, &args_ok, param_buffer_first, param_buffer_second);
+        countArguments(0, &args_ok, arg1_buffer, arg2_buffer);
         if(args_ok){
             printf("WARNING! The irrigation system controler will be terminated.\nAre you sure you want proceed?\n[y/n]");
             int ret = recieveConfirmation();
@@ -166,7 +156,7 @@ int processCommand(char *input){
     }
     else if (strncmp(cmd_buffer, "stop", 5) == 0)
     {
-        countArguments(0, &args_ok, param_buffer_first, param_buffer_second);
+        countArguments(0, &args_ok, arg1_buffer, arg2_buffer);
         verifyState(&args_ok, true);
         if(args_ok && !checkDeviceState()){
             fprintf(stderr, "The system is currently not dispensing.\n");
@@ -193,7 +183,7 @@ int processCommand(char *input){
     }
     else if (strncmp(cmd_buffer, "state", 6) == 0)
     {
-        countArguments(0, &args_ok, param_buffer_first, param_buffer_second);
+        countArguments(0, &args_ok, arg1_buffer, arg2_buffer);
         if(args_ok){
             char *state_string = checkDeviceState() ? "Currently dispensing...\n" : "System is not dispensing.\n";
             printf("%s", state_string);
@@ -202,9 +192,6 @@ int processCommand(char *input){
     else{
         fprintf(stderr, "Command not recognized.\n");
     }
-    free(cmd_buffer);
-    free(param_buffer_first);
-    free(param_buffer_second);
     return EXIT_SUCCESS;
 }
 
@@ -253,81 +240,6 @@ bool checkArgument(char *arg){
         index++;
     }
     if(arg[index] != '\0' && arg[index] != '\n') return false; 
-    return true;
-}
-
-bool splitToBuffers(char *input, char *cmd_buffer, char *param_buffer_first, char *param_buffer_second){
-    int index = 0;
-    int buffer_index = 0;
-    int offset = 0;
-    int current_buffer = 1;
-    while (input[index] != '\0')
-    {
-        switch (current_buffer)
-        {
-        case 1:
-            while (input[index] != ' ' && input[index] != '\0')
-            {        
-                cmd_buffer[index] = input[index];
-                index++;
-                if(index >= MAX_LENGHT){
-                    fprintf(stderr, "Input parameter too long and not recongized.\n");
-                    return false;
-                }
-            }
-            cmd_buffer[index] = '\0';
-            if(input[index] != '\0'){
-                current_buffer++;
-                index++;
-            }
-            break;
-        case 2:
-            buffer_index = 0;
-            offset = index;
-            while (input[index] != ' ' && input[index] != '\0')
-            {        
-                param_buffer_first[buffer_index] = input[index];
-                index++;
-                buffer_index++;
-                if(buffer_index >= MAX_LENGHT - offset){
-                    fprintf(stderr, "Input parameter too long and not recongized.\n");
-                    return false;
-                }
-            }
-            param_buffer_first[buffer_index] = '\0';
-            if(input[index] != '\0'){
-                current_buffer++;
-                index++;
-            }
-            break;
-        case 3:
-            buffer_index = 0;
-            offset = index;
-            while (input[index] != '\0' && input[index] != ' ')
-            {        
-                param_buffer_second[buffer_index] = input[index];
-                index++;
-                buffer_index++;
-                if(buffer_index >= MAX_LENGHT - offset){
-                    fprintf(stderr, "Input parameter too long and not recongized.\n");
-                    return false;
-                }
-            }
-            if(input[index] != '\0'){
-                fprintf(stderr, "Too many parameters, there are commands that accept 2 parameters at most.\n");
-                return false;
-            }
-            param_buffer_second[buffer_index] = '\0';
-            break;   
-        default:
-            fprintf(stderr, "Failed to parse command!\n");
-            return false;
-        }
-        if(index >= MAX_LENGHT){
-            fprintf(stderr, "Input command too long and not recongized.\n");
-            return false;
-        }
-    }
     return true;
 }
 
