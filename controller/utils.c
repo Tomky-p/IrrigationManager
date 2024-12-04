@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <string.h>
+#include <strings.h>
 #include "utils.h"
 #include "gpio_utils.h"
 
@@ -36,11 +37,11 @@ LIST OF ALL COMMANDS
     show whether the system is dispensing or not
 */
 int processCommand(char *input){
-    char *cmd_buffer, arg1_buffer, arg2_buffer, tmp_ptr;
+    char *cmd_buffer, *arg1_buffer, *arg2_buffer, *tmp_ptr;
 
-    cmd_buffer = strtok_r(input, " \r\n", &tmp_ptr);
-    arg1_buffer = strtok_r(NULL, " \r\n", &tmp_ptr);
-    arg2_buffer = strtok_r(NULL, " \r\n", &tmp_ptr);
+    cmd_buffer = __strtok_r(input, " \r\n", &tmp_ptr);
+    arg1_buffer = __strtok_r(NULL, " \r\n", &tmp_ptr);
+    arg2_buffer = __strtok_r(NULL, " \r\n", &tmp_ptr);
 
     bool args_ok = true;
     if(strncmp(cmd_buffer, "mode", 5) == 0)

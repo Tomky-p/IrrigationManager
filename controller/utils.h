@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
+#include <strings.h>
+#include <string.h>
 #include <pthread.h>
 
 //Conversion constants
