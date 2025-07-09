@@ -54,7 +54,7 @@
 //Fatal JSON and HTTP request err codes
 #define FILE_NOT_FOUND_ERR -1
 #define HTTP_INIT_ERR -2
-#define CURL_WRITEFUNC_ERROR 0
+#define CURL_WRITEFUNC_ERR 0
 #define JSON_READ_ERR -4
 #define CURL_REQUEST_ERR -5
 

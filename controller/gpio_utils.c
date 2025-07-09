@@ -11,10 +11,14 @@ int initGpioPinControl(){
 }
 
 bool checkDeviceState(){
-    //if(digitalRead(DEVICE_PIN_NUMBER) == HIGH) return true;
-    //else return false;
-    if(config.dispensing) return true;
-    else return false;
+    if(!DEBUG_NON_PI) {
+        if(digitalRead(DEVICE_PIN_NUMBER) == HIGH) return true;
+        else return false;
+    }
+    else {
+        if(config.dispensing) return true;
+        else return false;
+    }
 }
 
 void runIrrigation(float duration){
@@ -37,7 +41,7 @@ void runIrrigation(float duration){
 
 void shutdownWaterPump(){
     pthread_mutex_lock(&config_mutex);
-    //digitalWrite(DEVICE_PIN_NUMBER, LOW);
+    if(!DEBUG_NON_PI) digitalWrite(DEVICE_PIN_NUMBER, LOW);
     printf("Turned off.\n");
     config.dispensing = false;
     pthread_mutex_unlock(&config_mutex);
@@ -45,7 +49,7 @@ void shutdownWaterPump(){
 
 void launchWaterPump(){
     pthread_mutex_lock(&config_mutex);
-    //digitalWrite(DEVICE_PIN_NUMBER, HIGH);
+    if(!DEBUG_NON_PI) digitalWrite(DEVICE_PIN_NUMBER, HIGH);
     printf("Turned on.\n");
     config.dispensing = true;
     pthread_mutex_unlock(&config_mutex);

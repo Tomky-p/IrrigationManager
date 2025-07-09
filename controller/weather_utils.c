@@ -14,7 +14,7 @@ size_t writeToBuffer(void *data, size_t size, size_t nmemb, void *userdata){
     char *tmp = realloc(raw_data->data, raw_data->size + real_size + 1);
     if(tmp == NULL){
         fprintf(stderr, "%s", ALLOC_ERR_MSG);
-        return CURL_WRITEFUNC_ERROR;
+        return CURL_WRITEFUNC_ERR;
     }
     raw_data->data = tmp;
     memcpy(&(raw_data->data[raw_data->size]), data, real_size);

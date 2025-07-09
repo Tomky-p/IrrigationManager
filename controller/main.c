@@ -106,11 +106,13 @@ void* irrigationController(){
     printf("Launching automatic filtration thread.\n");
     
     //initialize gpio pin interface
-    /*if(initGpioPinControl() == ALLOCATION_ERR){
-        config.running = false;
-        *ret = GPIO_ERR;
-        return (void*)ret;
-    }*/
+    if(!DEBUG_NON_PI) {
+        if(initGpioPinControl() == ALLOCATION_ERR){
+            config.running = false;
+            *ret = GPIO_ERR;
+            return (void*)ret;
+        }
+    }
     //initialize api request parameters
     req_params_t request_params;
     request_params.api_key = NULL;

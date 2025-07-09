@@ -5,6 +5,11 @@
 #include <time.h>
 #include <pthread.h>
 
+//debug guard
+#ifndef DEBUG_NON_PI
+#define DEBUG_NON_PI false
+#endif
+
 //Conversion constants
 #define DAY_IN_MINUTES 1440
 #define MAX_TIME 2359
