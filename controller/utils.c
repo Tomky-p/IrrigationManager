@@ -177,7 +177,7 @@ int processCommand(char *input){
             int ret = recieveConfirmation();
             if(ret == ALLOCATION_ERR) return ALLOCATION_ERR;
             if(ret == YES){
-                printf("Stopping filtration...\n");
+                printf("Stopping Irrigation...\n");
                 pthread_mutex_lock(&config_mutex);
                 config.dispensing = false;
                 pthread_mutex_unlock(&config_mutex);
@@ -212,7 +212,7 @@ int readCmd(char **command)
 {
     unsigned capacity = STARTING_CAPACITY;
     unsigned curLength = 0;
-    char c;
+    int c;
 
     while ((c = getchar()) != EOF && c != '\n' && c != '\0') {
         if(curLength >= MAX_LENGHT) return LENGHT_ERR;

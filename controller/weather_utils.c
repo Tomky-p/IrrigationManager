@@ -252,7 +252,7 @@ int readDataFromFile(char *filename, char **buffer){
         fprintf(stderr, ALLOC_ERR_MSG);
         return ALLOCATION_ERR;
     }
-    char c;
+    int c;
     int i = 0;
     while ((c = fgetc(data_file)) != '\n' && c != EOF)
     {

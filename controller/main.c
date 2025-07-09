@@ -71,7 +71,7 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
     if(pthread_create(&irrigationControl, NULL, irrigationController, NULL) != 0){
-        fprintf(stderr, "FATAL ERR! Failed to create automatic filtration thread.\n");
+        fprintf(stderr, "FATAL ERR! Failed to create automatic irrigator thread.\n");
         pthread_mutex_destroy(&config_mutex);
         return EXIT_FAILURE;
     }
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]){
 void* irrigationController(){  
     int *ret = malloc(sizeof(int));
     *ret = EXIT_SUCCESS;
-    printf("Launching automatic filtration thread.\n");
+    printf("Launching automatic irrigation thread.\n");
     
     //initialize gpio pin interface
     if(!DEBUG_NON_PI) {
