@@ -133,6 +133,8 @@ int recieveConfirmation();
 
 int getCurrentTime();
 
+const char* getCurrentDateTime();
+
 bool isIntTime(int time_val);
 
 //returns how many minutes it takes to dispense a certain amount of water

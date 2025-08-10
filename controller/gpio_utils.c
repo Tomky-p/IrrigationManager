@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "gpio_utils.h"
+#include "logger.h"
 #include <time.h>
 #include <wiringPi.h>
 #include <stdio.h>
@@ -43,6 +44,7 @@ void shutdownWaterPump(){
     pthread_mutex_lock(&config_mutex);
     if(!DEBUG_NON_PI) digitalWrite(DEVICE_PIN_NUMBER, LOW);
     printf("Turned off.\n");
+    log_(ACTION, "Turned OFF the water pump.\n");
     config.dispensing = false;
     pthread_mutex_unlock(&config_mutex);
 }
@@ -51,6 +53,7 @@ void launchWaterPump(){
     pthread_mutex_lock(&config_mutex);
     if(!DEBUG_NON_PI) digitalWrite(DEVICE_PIN_NUMBER, HIGH);
     printf("Turned on.\n");
+    log_(ACTION, "Turned ON the water pump.\n");
     config.dispensing = true;
     pthread_mutex_unlock(&config_mutex);
 }

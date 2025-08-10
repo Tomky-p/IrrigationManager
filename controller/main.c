@@ -4,6 +4,7 @@
 #include <string.h>
 #include "weather_utils.h"
 #include "gpio_utils.h"
+#include "logger.h"
 #include <json-c/json.h>
 
 
@@ -55,6 +56,14 @@ int main(int argc, char *argv[]){
     //print config
     printf("Starting with following configuration:\n");
     printConfig();
+
+    //init logger
+    if(initLogger() != EXIT_SUCCESS) {
+        fprintf(stderr, "Failed to initialize the logger!\n");
+        free(config.time_routine);
+        return EXIT_FAILURE;
+    }
+    printf("Logger initialized!\n");
 
     int *IC_thread_result;
     int *CMD_thread_result;
@@ -112,6 +121,7 @@ void* irrigationController(){
             *ret = GPIO_ERR;
             return (void*)ret;
         }
+        log_(INFO, "Initialized GPIO interface.\n");
     }
     //initialize api request parameters
     req_params_t request_params;
@@ -122,6 +132,7 @@ void* irrigationController(){
         config.running = false;
         pthread_mutex_unlock(&config_mutex);
     }
+    log_(INFO, "Initialized for API requests.\n");
 
     int executed = TIME_ERR;
     pthread_mutex_lock(&config_mutex);
@@ -147,6 +158,7 @@ void* irrigationController(){
                 pthread_mutex_lock(&config_mutex);
                 config.time_last_ran = curtime;
                 pthread_mutex_unlock(&config_mutex);
+                log_(INFO, "Running automatically for %f seconds.\n", (duration*60));
                 runIrrigation(duration);  
             } 
         }
@@ -159,6 +171,7 @@ void* irrigationController(){
             //run the irrigation regardless of the weather but recieve a warning
             *ret = evaluateWeatherData(&request_params, curtime, (int)duration);
             if(*ret < 0) break;
+            log_(INFO, "Running manually for %f seconds.\n", (duration*60));
             runIrrigation(duration);
         }
         else{

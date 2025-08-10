@@ -1,3 +1,4 @@
+#define _GNU_SOURCE 
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -6,6 +7,7 @@
 #include <string.h>
 #include "utils.h"
 #include "gpio_utils.h"
+#include "logger.h"
 
 //initialize global (thread shared) variables 
 config_t config = {0};
@@ -83,10 +85,12 @@ int processCommand(char *input){
         else{
             fprintf(stderr, "Unrecognized parameter, USAGE: -m for manual or -a for automatic mode.\n");
         }
+        log_(ACTION, "Mode command used. Mode is now: %s\n", (config.mode == AUTO) ? "AUTO" : "MANUAL");
         pthread_mutex_unlock(&config_mutex);
     }
     else if (strncmp(cmd_buffer, "run", 4) == 0)
     {   
+        log_(ACTION, "Run command used.\n");
         pthread_mutex_lock(&config_mutex);
         if(config.mode == AUTO){
             fprintf(stderr, "Currently running in automatic mode, to use run command switch to manual mode.\n");
@@ -136,6 +140,7 @@ int processCommand(char *input){
                 config.amount = new_amount;
                 pthread_mutex_unlock(&config_mutex);
                 printf("Configuration set to:\n");
+                //logConfigChange(); //TO DO implement this
                 printConfig();
             }
             else{
@@ -351,6 +356,16 @@ int getCurrentTime(){
     struct tm *currentTime = localtime(&now);
     if (currentTime == NULL) return TIME_ERR;
     return (currentTime->tm_hour*100 + currentTime->tm_min);
+}
+
+const char* getCurrentDateTime() {
+    time_t now = time(NULL);
+    struct tm *ct = localtime(&now);
+    if (ct == NULL) return NULL;
+
+    static char time_str[20];
+    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", ct);
+    return time_str;
 }
 
 bool isIntTime(int time_val){

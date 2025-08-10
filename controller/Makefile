@@ -6,9 +6,9 @@ LDFLAGS = -lwiringPi -lcurl -ljson-c
 
 TARGET = IrrigationManager
 
-SRCS = main.c utils.c weather_utils.c gpio_utils.c
+SRCS = main.c utils.c weather_utils.c gpio_utils.c logger.c
 
-HEADERS = utils.h weather_utils.h gpio_utils.h
+HEADERS = utils.h weather_utils.h gpio_utils.h logger.h
 
 OBJS=$(SRCS:.c=.o)
 

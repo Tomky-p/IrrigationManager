@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdbool.h> 
+#include <stdlib.h>
+#include <string.h>
 #include <curl/curl.h> 
 #include <json-c/json.h>
 #include <time.h>
 #include "weather_utils.h"
 #include "utils.h"
-#include <stdlib.h>
-#include <string.h>
+#include "logger.h"
 
 size_t writeToBuffer(void *data, size_t size, size_t nmemb, void *userdata){
     size_t real_size = size * nmemb;
@@ -69,6 +70,7 @@ int getPreviousWeather(struct json_object **weather_data, req_params_t *params){
         fprintf(stderr, "%s", URL_COPY_ERR);
         return HTTP_INIT_ERR;
     }
+    log_(ACTION, "Requesting previous weather.\n");
     return sendAPIRequest(url, weather_data);
 }
 
@@ -81,6 +83,7 @@ int getWeatherForecast(struct json_object **weather_data, uint8_t days, req_para
         fprintf(stderr, "%s", URL_COPY_ERR);
         return HTTP_INIT_ERR;
     }
+    log_(ACTION, "Requesting weather forecast.\n");
     return sendAPIRequest(url, weather_data);
 }
 
@@ -204,16 +207,19 @@ int evaluateWeatherData(req_params_t *params, int curtime, int manual_duration){
     if(checkIrrigationLevel(upcom_precip_mm) || (float)upcom_rain_hours > ((float)upcom_interval_hours*0.6)){
         char *message = (manual_duration > 0) ? "Suspected rainfall in the upcoming hours. Running the system could overwater the soil!\n" : "Postponed irrigation due to suspected rainfall.\n"; 
         printf("%s", message);
+        log_(INFO, message);
         json_object_put(weather_data);
         return NO;
     }
     if(checkIrrigationLevel(prev_precip_mm) || (float)prev_rain_hours > ((float)prev_interval_hours*0.6)){
         char *message = (manual_duration > 0) ? "There was a substancial amount of rainfall in previous hours. Running the system could overwater the soil!\n" : "Postponed irrigation due to previous rainfall.\n"; 
         printf("%s", message);
+        log_(INFO, message);
         json_object_put(weather_data);
         return NO;
     }
     printf("Weather is dry beginning dispensing...\n");
+    log_(INFO, "Weather is dry beginning dispensing...\n");
     //destroy json objects
     json_object_put(weather_data);
     return YES;
@@ -307,7 +313,10 @@ int checkAPIErrs(struct json_object **weather_data){
         struct json_object *code;
         json_object_object_get_ex(error, "code", &code);
         int err_code = json_object_get_int(code);
+
         fprintf(stderr, API_ERR_RESP_MSG, err_code, getErrMessage(err_code));
+        log_(ERROR, getErrMessage(err_code));
+
         json_object_put(*weather_data);
         return err_code;
     }
