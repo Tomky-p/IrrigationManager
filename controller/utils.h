@@ -17,7 +17,7 @@
 
 #ifndef LITERS_PER_HOUR
 //the amount of water flowing into the system per hour (based on the water pump)
-#define LITERS_PER_HOUR 1200
+#define LITERS_PER_HOUR 100
 #endif
 
 //String constants
@@ -60,7 +60,7 @@
 
 #ifndef MAX_AMOUNT_PER_DAY
 //The maximum amount of water to be realeased in a cycle (in liters)
-#define MAX_AMOUNT_PER_DAY 170
+#define MAX_AMOUNT_PER_DAY 230
 #endif
 
 #ifndef MIN_INTERVAL
