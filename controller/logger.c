@@ -28,7 +28,6 @@ void log_(const char *level, const char *msg_format, ...) {
 
 }
 
-
 void logConfigChange(){
     //TO DO: implement this
     return;

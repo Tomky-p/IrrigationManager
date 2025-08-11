@@ -113,6 +113,7 @@ void* irrigationController(){
     int *ret = malloc(sizeof(int));
     *ret = EXIT_SUCCESS;
     printf("Launching automatic irrigation thread.\n");
+    log_(INFO, "Launching automatic irrigation thread.\n");
     
     //initialize gpio pin interface
     if(!DEBUG_NON_PI) {
@@ -196,6 +197,7 @@ void* cmdManager(){
         return (void*)ret;
     } 
     printf("Launching command line listener thread.\n");
+    log_(INFO, "Launching command line listener thread.\n");
 
     //command line control thread
     pthread_mutex_lock(&config_mutex);
