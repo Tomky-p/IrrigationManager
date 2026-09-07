@@ -2,20 +2,9 @@
 #include <curl/curl.h> 
 #include <json-c/json.h>
 #include <stdbool.h>
+#include "locations.h"
 
 //HTTP request constants and parameters
-#ifndef API_KEY_FILENAME
-//file where the api key is stored 
-#define API_KEY_FILENAME "api_key.txt"
-#endif
-
-#define API_KEY_LENGHT 31
-
-#ifndef LOCATION_FILENAME
-//Geographic location coordinates used to pull weather data
-#define LOCATION_FILENAME "coords.txt"
-#endif
-
 #ifndef BASE_URL_FORECAST 
 #define BASE_URL_FORECAST "http://api.weatherapi.com/v1/forecast.json?key="
 #endif
@@ -101,7 +90,7 @@ int evaluateWeatherData(req_params_t *req_data, int curtime, int manual_duration
 int getRequestData(req_params_t *req_params);
 
 //reads data from file and stores inside buffer
-int readDataFromFile(char *filename, char **buffer);
+int readDataFromFile(const char *filename, char **buffer);
 
 //makes API request based on the provided URL
 int sendAPIRequest(char *url, struct json_object **weather_data);

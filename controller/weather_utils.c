@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdbool.h> 
 #include <stdlib.h>
@@ -245,8 +246,23 @@ int getRequestData(req_params_t *req_params){
     return EXIT_SUCCESS;
 }
 
+int readSecret(enum Locations location, char **buffer) {
+    if (location < 0 || location >= NUM_LOCATIONS) return INVALID_LOCATION;
 
-int readDataFromFile(char *filename, char **buffer){
+    const char *env_var = LOCATIONS[location].env_var_name;
+    char *env_value = getenv(env_var);
+    if (env_value != NULL) {
+        *buffer = strdup(env_value);
+        if (*buffer == NULL) {
+            fprintf(stderr, "%s", ALLOC_ERR_MSG);
+            return ALLOCATION_ERR;
+        }
+        return EXIT_SUCCESS;
+    }
+    return readDataFromFile(LOCATIONS[location].filepath, buffer);
+}
+
+int readDataFromFile(const char *filename, char **buffer){
     FILE *data_file = fopen(filename, "r");
     if(data_file == NULL){
         fprintf(stderr, FILE_NOT_FOUND_ERR_MSG ,filename);
